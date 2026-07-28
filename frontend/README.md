@@ -1,0 +1,1 @@
+# ScoutUp — Frontend
