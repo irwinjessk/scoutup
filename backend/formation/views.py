@@ -1,4 +1,6 @@
+from django.http import FileResponse, Http404
 from rest_framework import permissions, status
+from rest_framework.renderers import BaseRenderer, JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -22,6 +24,28 @@ from .services import (
     overview_for_jeune,
     start_formation,
 )
+
+
+class PDFFileRenderer(BaseRenderer):
+    """Accepte Accept: application/pdf pour les téléchargements brevet."""
+
+    media_type = 'application/pdf'
+    format = 'pdf'
+    charset = None
+    render_style = 'binary'
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return data
+
+
+class AnyFileRenderer(BaseRenderer):
+    media_type = '*/*'
+    format = 'bin'
+    charset = None
+    render_style = 'binary'
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return data
 
 
 def _err(exc: FormationError):
@@ -252,18 +276,26 @@ class JeuneBrevetsView(APIView):
 
 
 class JeuneBrevetDownloadView(APIView):
+    """PDF binaire — évite le 406 DRF sur Accept: application/pdf."""
+
     permission_classes = [permissions.IsAuthenticated, IsActif, IsJeune]
+    renderer_classes = [JSONRenderer, PDFFileRenderer, AnyFileRenderer]
 
     def get(self, request, pk):
         cert = Certificate.objects.filter(pk=pk, jeune=request.user).first()
         if not cert or not cert.fichier:
             return Response({'detail': 'Brevet introuvable.'}, status=status.HTTP_404_NOT_FOUND)
-        from django.http import FileResponse
+
+        try:
+            handle = cert.fichier.open('rb')
+        except FileNotFoundError as exc:
+            raise Http404('Fichier brevet introuvable.') from exc
 
         return FileResponse(
-            cert.fichier.open('rb'),
+            handle,
             as_attachment=True,
             filename=f'brevet-{cert.stage.code.lower()}.pdf',
+            content_type='application/pdf',
         )
 
 
