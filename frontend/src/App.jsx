@@ -1,122 +1,90 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
-function App() {
-  const [count, setCount] = useState(0)
+import { AuthBootstrap } from '@/components/AuthBootstrap'
+import CcLayout from '@/components/layout/CcLayout'
+import CgLayout from '@/components/layout/CgLayout'
+import JeuneLayout from '@/components/layout/JeuneLayout'
+import { GuestRoute, ProtectedRoute } from '@/components/ProtectedRoute'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { AuthProvider } from '@/context/AuthContext'
+import Accueil from '@/pages/Accueil'
+import Contact from '@/pages/Contact'
+import Login from '@/pages/auth/Login'
+import PendingValidation from '@/pages/auth/PendingValidation'
+import Register from '@/pages/auth/Register'
+import CcDashboard from '@/pages/cc/Dashboard'
+import CcEvaluations from '@/pages/cc/Evaluations'
+import CcFormation from '@/pages/cc/Formation'
+import CcGenieRoute from '@/pages/cc/GenieRoute'
+import CcJeunes from '@/pages/cc/Jeunes'
+import CcPresences from '@/pages/cc/Presences'
+import CgChefs from '@/pages/cg/Chefs'
+import CgContenus from '@/pages/cg/Contenus'
+import CgDashboard from '@/pages/cg/Dashboard'
+import CgJeunes from '@/pages/cg/Jeunes'
+import CgJournal from '@/pages/cg/Journal'
+import JeuneBrevets from '@/pages/jeune/Brevets'
+import JeuneCompte from '@/pages/jeune/Compte'
+import JeuneEvaluation from '@/pages/jeune/Evaluation'
+import JeuneFormation from '@/pages/jeune/Formation'
+import JeuneGenieRoute from '@/pages/jeune/GenieRoute'
+import JeuneHome from '@/pages/jeune/Home'
+import JeuneQuiz from '@/pages/jeune/Quiz'
 
+export default function App() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <AuthProvider>
+      <AuthBootstrap>
+        <TooltipProvider>
+          <BrowserRouter basename={import.meta.env.BASE_URL}>
+            <Routes>
+              <Route path="/" element={<Accueil />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/attente-validation" element={<PendingValidation />} />
 
-      <div className="ticks"></div>
+              <Route element={<GuestRoute />}>
+                <Route path="/connexion" element={<Login />} />
+                <Route path="/inscription" element={<Register />} />
+              </Route>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+              <Route element={<ProtectedRoute roles={['JEUNE']} />}>
+                <Route path="/jeune" element={<JeuneLayout />}>
+                  <Route index element={<JeuneHome />} />
+                  <Route path="formation" element={<JeuneFormation />} />
+                  <Route path="quiz" element={<JeuneQuiz />} />
+                  <Route path="genie-route" element={<JeuneGenieRoute />} />
+                  <Route path="evaluation" element={<JeuneEvaluation />} />
+                  <Route path="brevets" element={<JeuneBrevets />} />
+                  <Route path="compte" element={<JeuneCompte />} />
+                </Route>
+              </Route>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+              <Route element={<ProtectedRoute roles={['CC']} />}>
+                <Route path="/cc" element={<CcLayout />}>
+                  <Route index element={<CcDashboard />} />
+                  <Route path="jeunes" element={<CcJeunes />} />
+                  <Route path="formation" element={<CcFormation />} />
+                  <Route path="evaluations" element={<CcEvaluations />} />
+                  <Route path="genie-route" element={<CcGenieRoute />} />
+                  <Route path="presences" element={<CcPresences />} />
+                </Route>
+              </Route>
+
+              <Route element={<ProtectedRoute roles={['CG']} />}>
+                <Route path="/cg" element={<CgLayout />}>
+                  <Route index element={<CgDashboard />} />
+                  <Route path="chefs" element={<CgChefs />} />
+                  <Route path="jeunes" element={<CgJeunes />} />
+                  <Route path="contenus" element={<CgContenus />} />
+                  <Route path="journal" element={<CgJournal />} />
+                </Route>
+              </Route>
+
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthBootstrap>
+    </AuthProvider>
   )
 }
-
-export default App

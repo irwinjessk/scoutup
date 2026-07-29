@@ -128,3 +128,24 @@
     @apply font-sans;
     }
 }
+
+/* Thèmes espaces chefs (CC rouge/bleu, CG violet/bleu) */
+.chef-shell[data-chef-theme='cc'] {
+  --chef-bg: #f4f7fb;
+  --chef-sidebar: #ffffff;
+  --chef-ink: #0f172a;
+  --chef-muted: #64748b;
+  --chef-border: #e2e8f0;
+  --chef-primary: #0073e6;
+  --chef-accent: #ff3131;
+}
+
+.chef-shell[data-chef-theme='cg'] {
+  --chef-bg: #f5f4fb;
+  --chef-sidebar: #ffffff;
+  --chef-ink: #1a1430;
+  --chef-muted: #6b6480;
+  --chef-border: #e4e0f0;
+  --chef-primary: #0073e6;
+  --chef-accent: #5b4cdb;
+}

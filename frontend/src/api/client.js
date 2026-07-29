@@ -1,27 +1,84 @@
 import { env } from '@/config/env'
+import { clearAuth, getAccessToken, getRefreshToken, loadAuth, saveAuth } from '@/stores/auth'
+
+export class ApiError extends Error {
+  constructor(message, { status, data } = {}) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.data = data
+  }
+}
+
+async function parseError(response) {
+  const text = await response.text().catch(() => '')
+  let data = null
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    data = text || null
+  }
+
+  const message =
+    (data && (data.detail || data.message)) ||
+    (typeof data === 'string' && data) ||
+    `Erreur API ${response.status}`
+
+  return new ApiError(String(message), { status: response.status, data })
+}
 
 /**
- * Appelle l'API backend avec l'URL de base définie dans .env
- * @param {string} path - chemin relatif, ex. "/api/health/"
- * @param {RequestInit} [options]
+ * Appelle l'API backend (/api/v1/...).
+ * @param {string} path - ex. "auth/login/"
+ * @param {RequestInit & { auth?: boolean }} [options]
  */
 export async function apiFetch(path, options = {}) {
-  const url = `${env.apiUrl.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
+  const { auth = true, headers: customHeaders, ...rest } = options
+  const url = `${env.apiUrl.replace(/\/$/, '')}/api/v1/${path.replace(/^\//, '')}`
+
+  const headers = {
+    Accept: 'application/json',
+    ...(rest.body ? { 'Content-Type': 'application/json' } : {}),
+    ...customHeaders,
+  }
+
+  if (auth) {
+    const token = getAccessToken()
+    if (token) headers.Authorization = `Bearer ${token}`
+  }
 
   const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      ...(options.headers ?? {}),
-    },
-    ...options,
+    ...rest,
+    headers,
   })
 
+  if (response.status === 401 && auth) {
+    clearAuth()
+  }
+
   if (!response.ok) {
-    const message = await response.text().catch(() => response.statusText)
-    throw new Error(message || `Erreur API ${response.status}`)
+    throw await parseError(response)
   }
 
   if (response.status === 204) return null
   return response.json()
+}
+
+export async function refreshAccessToken() {
+  const refresh = getRefreshToken()
+  if (!refresh) return null
+
+  const data = await apiFetch('auth/refresh/', {
+    method: 'POST',
+    auth: false,
+    body: JSON.stringify({ refresh }),
+  })
+
+  const current = loadAuth()
+  const tokens = {
+    access: data.access,
+    refresh: data.refresh ?? refresh,
+  }
+  saveAuth({ user: current.user, tokens })
+  return tokens.access
 }
