@@ -34,7 +34,8 @@ export function fetchBrevets() {
   return apiFetch('jeune/brevets/')
 }
 
-export async function downloadBrevet(cert) {
+/** Charge le PDF brevet (blob + object URL). Penser à revokeObjectURL après usage. */
+export async function fetchBrevetBlob(cert) {
   const path =
     cert?.download_url?.replace(/^\/?api\/v1\//, '') ||
     `jeune/brevets/${cert.id}/download/`
@@ -60,14 +61,26 @@ export async function downloadBrevet(cert) {
     })
   }
   const blob = await response.blob()
-  const objectUrl = URL.createObjectURL(blob)
+  const objectUrl = URL.createObjectURL(
+    blob.type ? blob : new Blob([blob], { type: 'application/pdf' }),
+  )
+  return { blob, objectUrl }
+}
+
+export async function downloadBrevet(cert, existingObjectUrl) {
+  let objectUrl = existingObjectUrl
+  let shouldRevoke = false
+  if (!objectUrl) {
+    ;({ objectUrl } = await fetchBrevetBlob(cert))
+    shouldRevoke = true
+  }
   const a = document.createElement('a')
   a.href = objectUrl
   a.download = `brevet-${(cert.stage_code || 'scout').toLowerCase()}.pdf`
   document.body.appendChild(a)
   a.click()
   a.remove()
-  URL.revokeObjectURL(objectUrl)
+  if (shouldRevoke) URL.revokeObjectURL(objectUrl)
 }
 
 /** ── CC ─────────────────────────────────────────────── */
