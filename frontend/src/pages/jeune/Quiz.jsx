@@ -13,6 +13,22 @@ import { useAuth } from '@/context/AuthContext'
 import { gsap, useGSAP } from '@/lib/gsap'
 import { cn } from '@/lib/utils'
 
+const TYPE_LABEL = {
+  QCM: 'QCM',
+  TEXTE_TROUS: 'Texte à trous',
+  REPONSE_DIRECTE: 'Réponse directe',
+}
+
+function blankCount(question) {
+  const fromOpts = question?.options?.nb_blanks
+  if (fromOpts) return Math.max(1, Number(fromOpts) || 1)
+  return Math.max(1, (question?.enonce?.match(/_{3,}/g) || []).length)
+}
+
+function splitEnonce(enonce) {
+  return String(enonce || '').split(/_{3,}/)
+}
+
 export default function JeuneQuiz() {
   const { patchUser } = useAuth()
   const cardRef = useRef(null)
@@ -25,6 +41,7 @@ export default function JeuneQuiz() {
   const [feedback, setFeedback] = useState(null)
   const [brevet, setBrevet] = useState(null)
   const [directAnswer, setDirectAnswer] = useState('')
+  const [blankAnswers, setBlankAnswers] = useState([])
   const [selectedOption, setSelectedOption] = useState(null)
 
   useGSAP(() => {
@@ -32,7 +49,7 @@ export default function JeuneQuiz() {
     gsap.fromTo(
       cardRef.current,
       { opacity: 0, y: 18 },
-      { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out' },
+      { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out', clearProps: 'opacity,transform' },
     )
   }, [question?.id])
 
@@ -41,6 +58,7 @@ export default function JeuneQuiz() {
     setLoading(true)
     setFeedback(null)
     setDirectAnswer('')
+    setBlankAnswers([])
     setSelectedOption(null)
     try {
       let data
@@ -57,6 +75,9 @@ export default function JeuneQuiz() {
       setProgress(data.progress)
       setQuestion(data.question)
       setTermine(Boolean(data.termine) || !data.question)
+      if (data.question?.type === 'TEXTE_TROUS') {
+        setBlankAnswers(Array.from({ length: blankCount(data.question) }, () => ''))
+      }
       if (data.foulard) patchUser({ foulard: data.foulard })
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Chargement impossible.')
@@ -101,6 +122,9 @@ export default function JeuneQuiz() {
   }
 
   const options = Array.isArray(question?.options) ? question.options : []
+  const parts = question?.type === 'TEXTE_TROUS' ? splitEnonce(question.enonce) : []
+  const canSubmitTrous =
+    blankAnswers.length > 0 && blankAnswers.every((v) => String(v).trim().length > 0)
 
   return (
     <div className="mx-auto max-w-lg space-y-5">
@@ -158,11 +182,40 @@ export default function JeuneQuiz() {
       ) : null}
 
       {!loading && question && !termine ? (
-        <div ref={cardRef} className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-5">
+        <div
+          ref={cardRef}
+          className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-5"
+        >
           <p className="text-xs uppercase tracking-wider text-white/35">
-            {question.type?.replace('_', ' ')}
+            {TYPE_LABEL[question.type] || question.type}
           </p>
-          <h2 className="text-lg font-medium leading-snug">{question.enonce}</h2>
+
+          {question.type === 'TEXTE_TROUS' ? (
+            <div className="text-lg font-medium leading-relaxed text-white">
+              {parts.map((part, i) => (
+                <span key={`p-${i}`}>
+                  {part}
+                  {i < parts.length - 1 ? (
+                    <input
+                      type="text"
+                      value={blankAnswers[i] || ''}
+                      disabled={busy || Boolean(feedback)}
+                      onChange={(e) => {
+                        const next = [...blankAnswers]
+                        next[i] = e.target.value
+                        setBlankAnswers(next)
+                      }}
+                      aria-label={`Trou ${i + 1}`}
+                      className="mx-1 inline-block h-9 min-w-[5.5rem] max-w-[10rem] rounded-lg border border-white/20 bg-white/10 px-2 text-center text-base font-semibold text-[#7eb6ff] outline-none placeholder:text-white/25 focus:border-[#0073e6]"
+                      placeholder="…"
+                    />
+                  ) : null}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <h2 className="text-lg font-medium leading-snug">{question.enonce}</h2>
+          )}
 
           {feedback ? (
             <div
@@ -173,14 +226,22 @@ export default function JeuneQuiz() {
                   : 'bg-[#ff3131]/15 text-[#ff8a8a]',
               )}
             >
-              {feedback.ok ? <Check className="mt-0.5 size-4 shrink-0" /> : <X className="mt-0.5 size-4 shrink-0" />}
+              {feedback.ok ? (
+                <Check className="mt-0.5 size-4 shrink-0" />
+              ) : (
+                <X className="mt-0.5 size-4 shrink-0" />
+              )}
               <div>
-                <p className="font-medium">{feedback.ok ? 'Bonne réponse' : 'Mauvaise réponse'}</p>
+                <p className="font-medium">
+                  {feedback.ok ? 'Bonne réponse' : 'Mauvaise réponse'}
+                </p>
                 {feedback.explication ? (
                   <p className="mt-1 text-white/60">{feedback.explication}</p>
                 ) : null}
                 {!feedback.ok ? (
-                  <p className="mt-1 text-white/50">Une moitié de foulard a été perdue (−15 min).</p>
+                  <p className="mt-1 text-white/50">
+                    Une moitié de foulard a été perdue (−15 min).
+                  </p>
                 ) : null}
               </div>
             </div>
@@ -212,7 +273,7 @@ export default function JeuneQuiz() {
             </ul>
           ) : null}
 
-          {!feedback && question.type !== 'QCM' ? (
+          {!feedback && question.type === 'REPONSE_DIRECTE' ? (
             <input
               type="text"
               value={directAnswer}
@@ -228,12 +289,19 @@ export default function JeuneQuiz() {
               <Button
                 disabled={
                   busy ||
-                  (question.type === 'QCM' ? selectedOption == null : !directAnswer.trim())
+                  (question.type === 'QCM'
+                    ? selectedOption == null
+                    : question.type === 'TEXTE_TROUS'
+                      ? !canSubmitTrous
+                      : !directAnswer.trim())
                 }
                 onClick={() => {
                   if (question.type === 'QCM') {
                     const opt = options.find((o) => (o.id ?? o.texte) === selectedOption)
                     submit(opt ?? { id: selectedOption })
+                  } else if (question.type === 'TEXTE_TROUS') {
+                    const values = blankAnswers.map((v) => v.trim())
+                    submit(values.length === 1 ? values[0] : values)
                   } else {
                     submit(directAnswer.trim())
                   }
