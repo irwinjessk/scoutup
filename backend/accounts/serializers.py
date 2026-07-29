@@ -15,8 +15,9 @@ class RegisterSerializer(serializers.Serializer):
     nom = serializers.CharField(max_length=80)
     prenoms = serializers.CharField(max_length=120)
     date_naissance = serializers.DateField()
-    genre = serializers.CharField(max_length=10, required=False, allow_blank=True)
+    genre = serializers.ChoiceField(choices=['M', 'F'], required=False, allow_blank=True)
     email = serializers.EmailField()
+    telephone = serializers.CharField(max_length=20)
     password = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True, min_length=8)
     communaute_id = serializers.IntegerField(required=False, allow_null=True)
@@ -25,6 +26,16 @@ class RegisterSerializer(serializers.Serializer):
         if User.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError('Cet email est déjà utilisé.')
         return value.lower()
+
+    def validate_telephone(self, value):
+        phone = (value or '').strip().replace(' ', '')
+        if not phone.startswith('+') or not phone[1:].isdigit() or len(phone) < 10:
+            raise serializers.ValidationError(
+                'Numéro invalide. Utilise le format international (ex. +2250700000000).'
+            )
+        if User.objects.filter(telephone=phone).exists():
+            raise serializers.ValidationError('Ce numéro est déjà utilisé.')
+        return phone
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -73,6 +84,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             'id',
             'email',
+            'telephone',
             'role',
             'statut',
             'nom',
@@ -105,6 +117,7 @@ class JeuneListSerializer(serializers.ModelSerializer):
         fields = (
             'id',
             'email',
+            'telephone',
             'nom',
             'prenoms',
             'nom_complet',
@@ -123,6 +136,7 @@ class CCListSerializer(serializers.ModelSerializer):
         fields = (
             'id',
             'email',
+            'telephone',
             'nom',
             'prenoms',
             'nom_complet',

@@ -140,12 +140,56 @@
   --chef-accent: #ff3131;
 }
 
-.chef-shell[data-chef-theme='cg'] {
-  --chef-bg: #f5f4fb;
-  --chef-sidebar: #ffffff;
-  --chef-ink: #1a1430;
-  --chef-muted: #6b6480;
-  --chef-border: #e4e0f0;
-  --chef-primary: #0073e6;
-  --chef-accent: #5b4cdb;
+/* react-phone-number-input — thème sombre ScoutUp */
+.ScoutPhoneInput.PhoneInput {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 3rem;
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  background: rgb(255 255 255 / 0.05);
+  padding-inline: 0.75rem;
+  color: white;
+}
+
+.ScoutPhoneInput.PhoneInput:focus-within {
+  outline: 2px solid #0073e6;
+  outline-offset: 0;
+  border-color: transparent;
+}
+
+.ScoutPhoneInput .PhoneInputCountry {
+  margin-right: 0;
+}
+
+.ScoutPhoneInput .PhoneInputCountryIcon {
+  width: 1.5rem;
+  height: 1.125rem;
+  box-shadow: none;
+  background: transparent;
+}
+
+.ScoutPhoneInput .PhoneInputCountrySelectArrow {
+  color: rgb(255 255 255 / 0.55);
+  opacity: 1;
+  border-color: currentColor;
+}
+
+.ScoutPhoneInput .PhoneInputCountrySelect {
+  color: #0d1117;
+}
+
+.ScoutPhoneInput .PhoneInputInput {
+  flex: 1;
+  min-width: 0;
+  border: 0 !important;
+  background: transparent !important;
+  color: white !important;
+  font-size: 0.875rem;
+}
+
+.ScoutPhoneInput .PhoneInputInput::placeholder {
+  color: rgb(255 255 255 / 0.3);
 }

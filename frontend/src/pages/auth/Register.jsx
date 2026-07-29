@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { isValidPhoneNumber } from 'react-phone-number-input'
 
 import { fetchCommunautes } from '@/api/auth'
 import { ApiError } from '@/api/client'
 import logoScoutUp from '@/assets/brand/logo-scoutup.png'
+import { PhoneField } from '@/components/PhoneField'
 import { useAuth } from '@/context/AuthContext'
 
 /** V1 : une seule communauté (FHB) — pas de choix UI. */
@@ -16,6 +18,7 @@ const emptyForm = {
   date_naissance: '',
   genre: 'M',
   email: '',
+  telephone: '',
   password: '',
   password_confirm: '',
   communaute_id: '',
@@ -70,10 +73,16 @@ export default function Register() {
       return
     }
 
+    if (!form.telephone || !isValidPhoneNumber(form.telephone)) {
+      setError('Indique un numéro de téléphone valide.')
+      return
+    }
+
     setLoading(true)
     try {
       await register({
         ...form,
+        telephone: form.telephone,
         communaute_id: Number(form.communaute_id),
       })
       navigate('/attente-validation', { replace: true })
@@ -179,11 +188,10 @@ export default function Register() {
             </Field>
             <fieldset className="space-y-2">
               <legend className="text-sm text-white/70">Genre</legend>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {[
                   { value: 'M', label: 'Masculin' },
                   { value: 'F', label: 'Féminin' },
-                  { value: 'AUTRE', label: 'Autre' },
                 ].map((opt) => {
                   const active = form.genre === opt.value
                   return (
@@ -204,6 +212,11 @@ export default function Register() {
                 })}
               </div>
             </fieldset>
+            <PhoneField
+              required
+              value={form.telephone || undefined}
+              onChange={(value) => updateField('telephone', value || '')}
+            />
             <Field label="Email">
               <input
                 type="email"
