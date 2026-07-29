@@ -54,8 +54,20 @@ class QuestionSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         qtype = attrs.get('type') or getattr(self.instance, 'type', None)
         options = attrs.get('options', getattr(self.instance, 'options', None))
+        enonce = attrs.get('enonce', getattr(self.instance, 'enonce', '') or '')
         if qtype == QuestionType.QCM and not options:
             raise serializers.ValidationError({'options': 'Options requises pour un QCM.'})
+        if qtype == QuestionType.TEXTE_TROUS:
+            from .services.grading import count_blanks
+
+            nb = count_blanks(enonce)
+            if nb < 1:
+                raise serializers.ValidationError(
+                    {'enonce': 'Utilise ___ pour chaque trou (ex. La devise est ___).'}
+                )
+            opts = dict(options or {})
+            opts['nb_blanks'] = nb
+            attrs['options'] = opts
         return attrs
 
 

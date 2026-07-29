@@ -13,6 +13,18 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 
+const TYPES = [
+  { id: 'QCM', label: 'QCM' },
+  { id: 'TEXTE_TROUS', label: 'Texte à trous' },
+  { id: 'REPONSE_DIRECTE', label: 'Réponse directe' },
+]
+
+const TYPE_LABEL = {
+  QCM: 'QCM',
+  TEXTE_TROUS: 'Texte à trous',
+  REPONSE_DIRECTE: 'Réponse directe',
+}
+
 const emptyForm = {
   type: 'QCM',
   enonce: '',
@@ -22,7 +34,30 @@ const emptyForm = {
   optionD: '',
   correct: 'a',
   reponseDirecte: '',
+  trousReponses: '',
   explication: '',
+}
+
+function countBlanks(enonce) {
+  return (enonce.match(/_{3,}/g) || []).length
+}
+
+/** "Grandir;Apprendre|grandir;apprendre" → [["Grandir","Apprendre"],["grandir","apprendre"]] */
+function parseTrousAnswers(raw, nbBlanks) {
+  const variants = raw
+    .split('|')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  if (!variants.length) return []
+  if (nbBlanks <= 1) {
+    return variants.map((v) => [v])
+  }
+  return variants.map((v) =>
+    v
+      .split(';')
+      .map((p) => p.trim())
+      .filter(Boolean),
+  )
 }
 
 export default function CcFormation() {
@@ -75,6 +110,7 @@ export default function CcFormation() {
   }, [selectedId])
 
   const selected = stages.find((s) => s.id === selectedId)
+  const blanksPreview = countBlanks(form.enonce)
 
   async function onCreate(e) {
     e.preventDefault()
@@ -99,6 +135,22 @@ export default function CcFormation() {
         const correct = options.find((o) => o.id === form.correct) || options[0]
         payload.options = options
         payload.reponse_attendue = correct
+      } else if (form.type === 'TEXTE_TROUS') {
+        const nb = countBlanks(form.enonce)
+        if (nb < 1) {
+          throw new ApiError('Place au moins un trou avec ___ dans l’énoncé.')
+        }
+        const sets = parseTrousAnswers(form.trousReponses, nb)
+        if (!sets.length) {
+          throw new ApiError('Indique au moins une réponse pour les trous.')
+        }
+        if (sets.some((row) => row.length !== nb)) {
+          throw new ApiError(
+            `Chaque variante doit avoir ${nb} réponse(s) séparée(s) par « ; ».`,
+          )
+        }
+        payload.options = { nb_blanks: nb }
+        payload.reponse_attendue = nb === 1 ? sets.map((row) => row[0]) : sets
       } else {
         payload.reponse_attendue = form.reponseDirecte
           .split('|')
@@ -194,18 +246,18 @@ export default function CcFormation() {
                   className="space-y-3 rounded-xl border border-[var(--chef-border)] bg-white p-4"
                 >
                   <div className="flex flex-wrap gap-2">
-                    {['QCM', 'REPONSE_DIRECTE'].map((t) => (
+                    {TYPES.map((t) => (
                       <button
-                        key={t}
+                        key={t.id}
                         type="button"
-                        onClick={() => setForm((f) => ({ ...f, type: t }))}
+                        onClick={() => setForm((f) => ({ ...f, type: t.id }))}
                         className={
-                          form.type === t
+                          form.type === t.id
                             ? 'rounded-lg bg-[var(--chef-primary)]/15 px-2.5 py-1 text-xs font-medium text-[var(--chef-primary)]'
                             : 'rounded-lg border border-[var(--chef-border)] px-2.5 py-1 text-xs'
                         }
                       >
-                        {t === 'QCM' ? 'QCM' : 'Réponse directe'}
+                        {t.label}
                       </button>
                     ))}
                   </div>
@@ -213,9 +265,21 @@ export default function CcFormation() {
                     required
                     value={form.enonce}
                     onChange={(e) => setForm((f) => ({ ...f, enonce: e.target.value }))}
-                    placeholder="Énoncé de la question"
+                    placeholder={
+                      form.type === 'TEXTE_TROUS'
+                        ? 'Ex. La devise Route est ___ · ___ · ___'
+                        : 'Énoncé de la question'
+                    }
                     className="min-h-20 w-full rounded-lg border border-[var(--chef-border)] px-3 py-2 text-sm outline-none focus:border-[var(--chef-primary)]"
                   />
+                  {form.type === 'TEXTE_TROUS' ? (
+                    <p className="text-xs text-[var(--chef-muted)]">
+                      Utilise <code className="rounded bg-slate-100 px-1">___</code> pour chaque
+                      trou
+                      {blanksPreview > 0 ? ` · ${blanksPreview} détecté(s)` : ''}.
+                    </p>
+                  ) : null}
+
                   {form.type === 'QCM' ? (
                     <div className="grid gap-2 sm:grid-cols-2">
                       {[
@@ -242,7 +306,28 @@ export default function CcFormation() {
                         </div>
                       ))}
                     </div>
-                  ) : (
+                  ) : null}
+
+                  {form.type === 'TEXTE_TROUS' ? (
+                    <div className="space-y-1">
+                      <input
+                        required
+                        value={form.trousReponses}
+                        onChange={(e) => setForm((f) => ({ ...f, trousReponses: e.target.value }))}
+                        placeholder={
+                          blanksPreview > 1
+                            ? 'Grandir;Apprendre;Servir | grandir;apprendre;servir'
+                            : 'Grandir | grandir'
+                        }
+                        className="h-9 w-full rounded-lg border border-[var(--chef-border)] px-3 text-sm outline-none focus:border-[var(--chef-primary)]"
+                      />
+                      <p className="text-xs text-[var(--chef-muted)]">
+                        Trous séparés par <strong>;</strong> · variantes par <strong>|</strong>
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {form.type === 'REPONSE_DIRECTE' ? (
                     <input
                       required
                       value={form.reponseDirecte}
@@ -250,7 +335,8 @@ export default function CcFormation() {
                       placeholder="Réponses acceptées (séparées par |)"
                       className="h-9 w-full rounded-lg border border-[var(--chef-border)] px-3 text-sm outline-none focus:border-[var(--chef-primary)]"
                     />
-                  )}
+                  ) : null}
+
                   <input
                     value={form.explication}
                     onChange={(e) => setForm((f) => ({ ...f, explication: e.target.value }))}
@@ -283,7 +369,7 @@ export default function CcFormation() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="secondary" className="border-0">
-                          {q.type}
+                          {TYPE_LABEL[q.type] || q.type}
                         </Badge>
                         {!q.actif ? (
                           <Badge variant="secondary" className="border-0 text-[var(--chef-muted)]">
