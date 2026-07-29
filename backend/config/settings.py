@@ -19,6 +19,11 @@ FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 DEFAULT_CG_EMAIL = config('DEFAULT_CG_EMAIL', default='cg@scoutup.local')
 DEFAULT_CG_PASSWORD = config('DEFAULT_CG_PASSWORD', default='ChangeMeCG2026!')
 
+# OAuth (laisser vide pour désactiver un provider)
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
+TIKTOK_CLIENT_KEY = config('TIKTOK_CLIENT_KEY', default='')
+TIKTOK_CLIENT_SECRET = config('TIKTOK_CLIENT_SECRET', default='')
+
 
 def _origin_from_url(url: str) -> str:
     parsed = urlparse(url)

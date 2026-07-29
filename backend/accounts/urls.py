@@ -19,6 +19,7 @@ from .views import (
     MeView,
     RegisterView,
 )
+from .oauth.views import OAuthLoginView, OAuthProvidersView, TikTokAuthorizeView
 
 app_name = 'accounts'
 
@@ -30,6 +31,10 @@ urlpatterns = [
     path('auth/logout/', LogoutView.as_view(), name='logout'),
     path('auth/me/', MeView.as_view(), name='me'),
     path('users/me/', MeView.as_view(), name='users-me'),
+    # OAuth
+    path('auth/oauth/providers/', OAuthProvidersView.as_view(), name='oauth-providers'),
+    path('auth/oauth/tiktok/authorize/', TikTokAuthorizeView.as_view(), name='oauth-tiktok-authorize'),
+    path('auth/oauth/<str:provider>/', OAuthLoginView.as_view(), name='oauth-login'),
     # CC — jeunes
     path('cc/jeunes/pending/', CCJeunesPendingView.as_view(), name='cc-jeunes-pending'),
     path('cc/jeunes/', CCJeunesListView.as_view(), name='cc-jeunes'),

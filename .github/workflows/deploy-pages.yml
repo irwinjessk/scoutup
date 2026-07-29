@@ -41,6 +41,7 @@ jobs:
         env:
           VITE_API_URL: https://scoutup.onrender.com
           VITE_APP_NAME: ScoutUp
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
         run: npm run build
 
       # GitHub Pages sert 404.html pour les URLs inconnues :

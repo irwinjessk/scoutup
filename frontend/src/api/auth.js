@@ -30,3 +30,23 @@ export function logoutRequest(refresh) {
 export function fetchCommunautes() {
   return apiFetch('communautes/', { auth: false })
 }
+
+export function fetchOauthProviders() {
+  return apiFetch('auth/oauth/providers/', { auth: false })
+}
+
+export function oauthLoginRequest(provider, payload) {
+  return apiFetch(`auth/oauth/${provider}/`, {
+    method: 'POST',
+    auth: false,
+    body: JSON.stringify(payload),
+  })
+}
+
+export function fetchTikTokAuthorizeUrl(redirectUri, state = 'scoutup') {
+  const q = new URLSearchParams({
+    redirect_uri: redirectUri,
+    state,
+  })
+  return apiFetch(`auth/oauth/tiktok/authorize/?${q}`, { auth: false })
+}

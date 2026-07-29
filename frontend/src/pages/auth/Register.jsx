@@ -6,7 +6,9 @@ import { fetchCommunautes } from '@/api/auth'
 import { ApiError } from '@/api/client'
 import logoScoutUp from '@/assets/brand/logo-scoutup.png'
 import { PhoneField } from '@/components/PhoneField'
+import { SocialAuthButtons } from '@/components/SocialAuthButtons'
 import { useAuth } from '@/context/AuthContext'
+import { homeForRole } from '@/lib/authRoutes'
 
 /** V1 : une seule communauté (FHB) — pas de choix UI. */
 const DEFAULT_COMMUNAUTE_NAME = 'Félix Houphouët-Boigny'
@@ -35,7 +37,7 @@ function pickDefaultCommunaute(list) {
 
 export default function Register() {
   const navigate = useNavigate()
-  const { register } = useAuth()
+  const { register, acceptSession } = useAuth()
   const [step, setStep] = useState('role') // role | form
   const [form, setForm] = useState(emptyForm)
   const [communauteLabel, setCommunauteLabel] = useState(DEFAULT_COMMUNAUTE_NAME)
@@ -155,6 +157,17 @@ export default function Register() {
             >
               ← Changer de profil ({form.role === 'JEUNE' ? 'Jeune' : 'Chef'})
             </button>
+
+            <SocialAuthButtons
+              mode="register"
+              role={form.role}
+              onSuccess={(data) => {
+                acceptSession(data.user, data.tokens)
+                navigate(homeForRole(data.user.role), { replace: true })
+              }}
+              onPending={() => navigate('/attente-validation', { replace: true })}
+              onError={setError}
+            />
 
             <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/65">
               Communauté :{' '}
