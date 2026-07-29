@@ -3,12 +3,13 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { ApiError } from '@/api/client'
 import logoScoutUp from '@/assets/brand/logo-scoutup.png'
+import { SocialAuthButtons } from '@/components/SocialAuthButtons'
 import { useAuth } from '@/context/AuthContext'
 import { homeForRole } from '@/lib/authRoutes'
 
 export default function Login() {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { login, acceptSession } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -85,6 +86,17 @@ export default function Login() {
             {loading ? 'Connexion…' : 'Se connecter'}
           </button>
         </form>
+
+        <SocialAuthButtons
+          mode="login"
+          className="mt-6"
+          onSuccess={(data) => {
+            acceptSession(data.user, data.tokens)
+            navigate(homeForRole(data.user.role), { replace: true })
+          }}
+          onPending={() => navigate('/attente-validation', { replace: true })}
+          onError={setError}
+        />
 
         <p className="mt-6 text-center text-sm text-white/55">
           Pas encore de compte ?{' '}

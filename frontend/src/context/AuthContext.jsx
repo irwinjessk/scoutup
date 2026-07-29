@@ -35,6 +35,14 @@ export function AuthProvider({ children }) {
     [persist],
   )
 
+  const acceptSession = useCallback(
+    (nextUser, nextTokens) => {
+      persist(nextUser, nextTokens)
+      return nextUser
+    },
+    [persist],
+  )
+
   const register = useCallback(async (payload) => {
     return registerRequest(payload)
   }, [])
@@ -73,12 +81,13 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(user && tokens?.access),
       bootstrapping,
       login,
+      acceptSession,
       register,
       logout,
       refreshUser,
       setBootstrapping,
     }),
-    [user, tokens, bootstrapping, login, register, logout, refreshUser],
+    [user, tokens, bootstrapping, login, acceptSession, register, logout, refreshUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
