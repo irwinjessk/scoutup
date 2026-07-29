@@ -1,3 +1,8 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import ScarfState
+
+
+@admin.register(ScarfState)
+class ScarfStateAdmin(admin.ModelAdmin):
+    list_display = ('jeune', 'moities_perdues', 'updated_at')

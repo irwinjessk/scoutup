@@ -24,11 +24,11 @@ export default function JeuneHome() {
 
       <div className="grid gap-3">
         <Link
-          to="/jeune/evaluation"
+          to="/jeune/formation"
           className="inline-flex h-12 items-center justify-start gap-3 rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-white transition hover:bg-white/10"
         >
           <ClipboardList className="size-4 text-[#ff3131]" />
-          Évaluation
+          Continuer la formation
         </Link>
         <Link
           to="/jeune/brevets"
