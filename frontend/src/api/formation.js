@@ -40,9 +40,10 @@ export async function downloadBrevet(cert) {
     `jeune/brevets/${cert.id}/download/`
   const url = `${env.apiUrl.replace(/\/$/, '')}/api/v1/${path.replace(/^\//, '')}`
   const token = getAccessToken()
+  // Pas d'Accept: application/pdf — DRF renvoie 406 (négociation de contenu).
   const response = await fetch(url, {
     headers: {
-      Accept: 'application/pdf',
+      Accept: '*/*',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   })
