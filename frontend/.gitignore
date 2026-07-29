@@ -1,3 +1,8 @@
+# Env (garder .env.example versionné)
+.env
+.env.*
+!.env.example
+
 # Logs
 logs
 *.log
