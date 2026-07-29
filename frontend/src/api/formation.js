@@ -39,7 +39,8 @@ export async function fetchBrevetBlob(cert) {
   const path =
     cert?.download_url?.replace(/^\/?api\/v1\//, '') ||
     `jeune/brevets/${cert.id}/download/`
-  const url = `${env.apiUrl.replace(/\/$/, '')}/api/v1/${path.replace(/^\//, '')}`
+  const base = `${env.apiUrl.replace(/\/$/, '')}/api/v1/${path.replace(/^\//, '')}`
+  const url = `${base}${base.includes('?') ? '&' : '?'}download=0`
   const token = getAccessToken()
   // Pas d'Accept: application/pdf — DRF renvoie 406 (négociation de contenu).
   const response = await fetch(url, {

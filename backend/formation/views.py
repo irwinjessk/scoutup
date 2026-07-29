@@ -282,18 +282,28 @@ class JeuneBrevetDownloadView(APIView):
     renderer_classes = [JSONRenderer, PDFFileRenderer, AnyFileRenderer]
 
     def get(self, request, pk):
-        cert = Certificate.objects.filter(pk=pk, jeune=request.user).first()
-        if not cert or not cert.fichier:
+        from .services.certificates import ensure_certificate_file
+
+        cert = (
+            Certificate.objects.filter(pk=pk, jeune=request.user)
+            .select_related('stage', 'stage__communaute')
+            .first()
+        )
+        if not cert:
             return Response({'detail': 'Brevet introuvable.'}, status=status.HTTP_404_NOT_FOUND)
 
         try:
+            cert = ensure_certificate_file(cert)
             handle = cert.fichier.open('rb')
-        except FileNotFoundError as exc:
+        except (FileNotFoundError, OSError, ValueError) as exc:
             raise Http404('Fichier brevet introuvable.') from exc
+
+        # Aperçu navigateur (iframe) vs téléchargement forcé
+        as_attachment = request.query_params.get('download', '1') not in ('0', 'false', 'preview')
 
         return FileResponse(
             handle,
-            as_attachment=True,
+            as_attachment=as_attachment,
             filename=f'brevet-{cert.stage.code.lower()}.pdf',
             content_type='application/pdf',
         )
