@@ -6,6 +6,9 @@ import { ApiError } from '@/api/client'
 import logoScoutUp from '@/assets/brand/logo-scoutup.png'
 import { useAuth } from '@/context/AuthContext'
 
+/** V1 : une seule communauté (FHB) — pas de choix UI. */
+const DEFAULT_COMMUNAUTE_NAME = 'Félix Houphouët-Boigny'
+
 const emptyForm = {
   role: 'JEUNE',
   nom: '',
@@ -18,12 +21,21 @@ const emptyForm = {
   communaute_id: '',
 }
 
+function pickDefaultCommunaute(list) {
+  if (!Array.isArray(list) || list.length === 0) return null
+  return (
+    list.find((c) => c.nom === DEFAULT_COMMUNAUTE_NAME) ||
+    list.find((c) => /houphouët|fhb/i.test(c.nom || '')) ||
+    list[0]
+  )
+}
+
 export default function Register() {
   const navigate = useNavigate()
   const { register } = useAuth()
   const [step, setStep] = useState('role') // role | form
   const [form, setForm] = useState(emptyForm)
-  const [communautes, setCommunautes] = useState([])
+  const [communauteLabel, setCommunauteLabel] = useState(DEFAULT_COMMUNAUTE_NAME)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -31,10 +43,14 @@ export default function Register() {
     let cancelled = false
     fetchCommunautes()
       .then((data) => {
-        if (!cancelled) setCommunautes(Array.isArray(data) ? data : [])
+        if (cancelled) return
+        const chosen = pickDefaultCommunaute(data)
+        if (!chosen) return
+        setCommunauteLabel(chosen.nom)
+        setForm((prev) => ({ ...prev, communaute_id: String(chosen.id) }))
       })
       .catch(() => {
-        if (!cancelled) setCommunautes([])
+        // L'id sera bloqué à la soumission si absent
       })
     return () => {
       cancelled = true
@@ -48,6 +64,12 @@ export default function Register() {
   async function onSubmit(event) {
     event.preventDefault()
     setError('')
+
+    if (!form.communaute_id) {
+      setError('Communauté FHB indisponible. Réessaie dans un instant.')
+      return
+    }
+
     setLoading(true)
     try {
       await register({
@@ -125,6 +147,11 @@ export default function Register() {
               ← Changer de profil ({form.role === 'JEUNE' ? 'Jeune' : 'Chef'})
             </button>
 
+            <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/65">
+              Communauté :{' '}
+              <span className="font-medium text-white">{communauteLabel}</span>
+            </p>
+
             <Field label="Nom">
               <input
                 required
@@ -159,21 +186,6 @@ export default function Register() {
                 <option value="M">Masculin</option>
                 <option value="F">Féminin</option>
                 <option value="AUTRE">Autre</option>
-              </select>
-            </Field>
-            <Field label="Communauté">
-              <select
-                required
-                value={form.communaute_id}
-                onChange={(e) => updateField('communaute_id', e.target.value)}
-                className={inputClass}
-              >
-                <option value="">Choisir…</option>
-                {communautes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nom}
-                  </option>
-                ))}
               </select>
             </Field>
             <Field label="Email">
@@ -239,4 +251,4 @@ function Field({ label, children }) {
 }
 
 const inputClass =
-  "h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white outline-none ring-[#0073e6] focus:ring-2 [color-scheme:dark]"
+  'h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white outline-none ring-[#0073e6] focus:ring-2 [color-scheme:dark]'
