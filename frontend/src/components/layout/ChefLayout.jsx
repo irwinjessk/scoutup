@@ -7,7 +7,6 @@ import { PageMotion } from '@/components/layout/PageMotion'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
   Sheet,
@@ -72,20 +71,21 @@ export default function ChefLayout({ variant, title, items }) {
   const sidebarRef = useRef(null)
 
   useGSAP(() => {
+    // Pas d'opacity sur les items : en Strict Mode GSAP peut les laisser à 0.
     const tl = gsap.timeline({ defaults: { ease: 'power2.out' } })
     if (sidebarRef.current) {
-      tl.from(sidebarRef.current, { x: -24, opacity: 0, duration: 0.45 })
+      tl.from(sidebarRef.current, { x: -24, duration: 0.4, clearProps: 'transform' })
       tl.from(
         sidebarRef.current.querySelectorAll('[data-nav-item]'),
-        { opacity: 0, x: -10, stagger: 0.05, duration: 0.3 },
+        { x: -8, stagger: 0.04, duration: 0.25, clearProps: 'transform' },
         '-=0.2',
       )
     }
     if (shellRef.current) {
       tl.from(
         shellRef.current.querySelector('[data-chef-header]'),
-        { opacity: 0, y: -8, duration: 0.35 },
-        '-=0.25',
+        { y: -8, duration: 0.3, clearProps: 'transform' },
+        '-=0.2',
       )
     }
   }, [])
@@ -112,9 +112,9 @@ export default function ChefLayout({ variant, title, items }) {
         </div>
       </div>
       <Separator className="bg-[var(--chef-border)]" />
-      <ScrollArea className="flex-1">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <NavItems items={items} onNavigate={() => setOpen(false)} />
-      </ScrollArea>
+      </div>
       <Separator className="bg-[var(--chef-border)]" />
       <div className="flex items-center gap-3 p-4">
         <Avatar className="border border-[var(--chef-border)] bg-[var(--chef-primary)]/10">
@@ -151,7 +151,7 @@ export default function ChefLayout({ variant, title, items }) {
     >
       <aside
         ref={sidebarRef}
-        className="hidden w-64 shrink-0 border-r border-[var(--chef-border)] bg-[var(--chef-sidebar)] lg:flex lg:flex-col"
+        className="hidden min-h-svh w-64 shrink-0 border-r border-[var(--chef-border)] bg-[var(--chef-sidebar)] lg:flex lg:flex-col"
       >
         {sidebar}
       </aside>
