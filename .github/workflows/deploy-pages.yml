@@ -43,6 +43,11 @@ jobs:
           VITE_APP_NAME: ScoutUp
         run: npm run build
 
+      # GitHub Pages sert 404.html pour les URLs inconnues :
+      # copie de index.html = fallback SPA (React Router).
+      - name: SPA fallback for GitHub Pages
+        run: cp dist/index.html dist/404.html
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
