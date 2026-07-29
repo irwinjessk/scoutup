@@ -25,6 +25,7 @@ build/
 htmlcov/
 *.sqlite3
 db.sqlite3
+staticfiles/
 
 # Node / frontend
 node_modules/
