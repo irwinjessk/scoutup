@@ -74,6 +74,18 @@ export function AuthProvider({ children }) {
     }
   }, [persist, tokens])
 
+  const patchUser = useCallback(
+    (partial) => {
+      setUser((prev) => {
+        if (!prev) return prev
+        const next = { ...prev, ...partial }
+        saveAuth({ user: next, tokens })
+        return next
+      })
+    },
+    [tokens],
+  )
+
   const value = useMemo(
     () => ({
       user,
@@ -85,9 +97,20 @@ export function AuthProvider({ children }) {
       register,
       logout,
       refreshUser,
+      patchUser,
       setBootstrapping,
     }),
-    [user, tokens, bootstrapping, login, acceptSession, register, logout, refreshUser],
+    [
+      user,
+      tokens,
+      bootstrapping,
+      login,
+      acceptSession,
+      register,
+      logout,
+      refreshUser,
+      patchUser,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

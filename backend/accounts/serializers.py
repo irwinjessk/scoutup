@@ -78,6 +78,7 @@ class RegisterSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     nom_complet = serializers.CharField(read_only=True)
     is_actif = serializers.BooleanField(read_only=True)
+    foulard = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -98,9 +99,20 @@ class UserSerializer(serializers.ModelSerializer):
             'etape_courante',
             'auth_provider',
             'is_actif',
+            'foulard',
             'created_at',
         )
         read_only_fields = fields
+
+    def get_foulard(self, obj):
+        if obj.role != Role.JEUNE:
+            return None
+        try:
+            from gamification.services import get_or_create_scarf, serialize_scarf, sync_recoveries
+
+            return serialize_scarf(sync_recoveries(get_or_create_scarf(obj)))
+        except Exception:
+            return None
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):

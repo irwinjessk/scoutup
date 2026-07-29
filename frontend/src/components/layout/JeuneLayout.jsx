@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 
 import logoScoutUp from '@/assets/brand/logo-scoutup.png'
+import FoulardIndicator from '@/components/FoulardIndicator'
 import { PageMotion } from '@/components/layout/PageMotion'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -76,6 +77,7 @@ export default function JeuneLayout() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <FoulardIndicator />
           <Avatar size="sm" className="border border-white/10 bg-white/10">
             <AvatarFallback className="bg-transparent text-[10px] text-white">
               {initials(user)}
