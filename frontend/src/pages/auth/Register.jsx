@@ -177,17 +177,33 @@ export default function Register() {
                 className={inputClass}
               />
             </Field>
-            <Field label="Genre">
-              <select
-                value={form.genre}
-                onChange={(e) => updateField('genre', e.target.value)}
-                className={inputClass}
-              >
-                <option value="M">Masculin</option>
-                <option value="F">Féminin</option>
-                <option value="AUTRE">Autre</option>
-              </select>
-            </Field>
+            <fieldset className="space-y-2">
+              <legend className="text-sm text-white/70">Genre</legend>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: 'M', label: 'Masculin' },
+                  { value: 'F', label: 'Féminin' },
+                  { value: 'AUTRE', label: 'Autre' },
+                ].map((opt) => {
+                  const active = form.genre === opt.value
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => updateField('genre', opt.value)}
+                      aria-pressed={active}
+                      className={
+                        active
+                          ? 'h-12 rounded-xl bg-[#0073e6] text-sm font-medium text-white'
+                          : 'h-12 rounded-xl border border-white/10 bg-white/5 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white'
+                      }
+                    >
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </fieldset>
             <Field label="Email">
               <input
                 type="email"
