@@ -38,6 +38,9 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          VITE_API_URL: https://scoutup.onrender.com
+          VITE_APP_NAME: ScoutUp
         run: npm run build
 
       - name: Upload Pages artifact
