@@ -60,13 +60,17 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# Origine GitHub Pages = https://irwinjessk.github.io (sans /scoutup)
+_DEFAULT_CORS_ORIGINS = [
+    _origin_from_url(FRONTEND_URL),
+    'https://irwinjessk.github.io',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+]
+
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default=','.join([
-        _origin_from_url(FRONTEND_URL),
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
-    ]),
+    default=','.join(dict.fromkeys(_DEFAULT_CORS_ORIGINS)),
     cast=Csv(),
 )
 CSRF_TRUSTED_ORIGINS = config(
