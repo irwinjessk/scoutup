@@ -18,6 +18,7 @@ class QuestionType(models.TextChoices):
 class ProgressStatut(models.TextChoices):
     EN_COURS = 'EN_COURS', 'En cours'
     VALIDE = 'VALIDE', 'Validé'
+    ACQUIS = 'ACQUIS', 'Acquis (placement)'
     VERROUILLE = 'VERROUILLE', 'Verrouillé'
 
 

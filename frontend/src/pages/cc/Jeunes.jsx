@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 
 import {
   acceptJeune,
+  assignJeuneEtape,
   fetchActiveJeunes,
   fetchPendingJeunes,
   rejectJeune,
 } from '@/api/cc'
 import { ApiError } from '@/api/client'
+import { fetchCcStages, initCcStages } from '@/api/formation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -17,46 +19,92 @@ function asList(data) {
   return []
 }
 
-function JeuneRow({ jeune, pending, onAccept, onReject, busyId }) {
+function JeuneRow({
+  jeune,
+  pending,
+  stages,
+  onAccept,
+  onReject,
+  onAssignEtape,
+  busyId,
+}) {
   const busy = busyId === jeune.id
   return (
-    <li className="flex flex-col gap-3 rounded-xl border border-[var(--chef-border)] bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0">
-        <p className="truncate font-medium text-[var(--chef-ink)]">
-          {jeune.nom_complet ||
-            `${jeune.prenoms || ''} ${jeune.nom || ''}`.trim() ||
-            jeune.email}
-        </p>
-        <p className="truncate text-sm text-[var(--chef-muted)]">{jeune.email}</p>
-      </div>
-      {pending ? (
-        <div className="flex shrink-0 gap-2">
-          <Button
-            size="sm"
-            disabled={busy}
-            onClick={() => onAccept(jeune.id)}
-            className="bg-[var(--chef-primary)] text-white hover:bg-[var(--chef-primary)]/90"
-          >
-            {busy ? '…' : 'Accepter'}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => onReject(jeune.id)}
-            className="border-[#ff3131]/40 text-[#ff3131] hover:bg-[#ff3131]/10"
-          >
-            Refuser
-          </Button>
+    <li className="flex flex-col gap-3 rounded-xl border border-[var(--chef-border)] bg-white px-4 py-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="truncate font-medium text-[var(--chef-ink)]">
+            {jeune.nom_complet ||
+              `${jeune.prenoms || ''} ${jeune.nom || ''}`.trim() ||
+              jeune.email}
+          </p>
+          <p className="truncate text-sm text-[var(--chef-muted)]">{jeune.email}</p>
+          {!pending ? (
+            <p className="mt-1 text-xs text-[var(--chef-muted)]">
+              Étape :{' '}
+              <span className="font-medium text-[var(--chef-ink)]">
+                {jeune.etape_courante_titre || 'Non placé'}
+              </span>
+              {!jeune.etape_placee ? ' · en attente de choix' : ''}
+            </p>
+          ) : null}
         </div>
-      ) : (
-        <Badge
-          variant="secondary"
-          className="w-fit border-0 bg-[var(--chef-primary)]/12 text-[var(--chef-primary)]"
-        >
-          Actif
-        </Badge>
-      )}
+        {pending ? (
+          <div className="flex shrink-0 gap-2">
+            <Button
+              size="sm"
+              disabled={busy}
+              onClick={() => onAccept(jeune.id)}
+              className="bg-[var(--chef-primary)] text-white hover:bg-[var(--chef-primary)]/90"
+            >
+              {busy ? '…' : 'Accepter'}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              onClick={() => onReject(jeune.id)}
+              className="border-[#ff3131]/40 text-[#ff3131] hover:bg-[#ff3131]/10"
+            >
+              Refuser
+            </Button>
+          </div>
+        ) : (
+          <Badge
+            variant="secondary"
+            className="w-fit border-0 bg-[var(--chef-primary)]/12 text-[var(--chef-primary)]"
+          >
+            Actif
+          </Badge>
+        )}
+      </div>
+
+      {!pending && stages.length > 0 ? (
+        <div className="flex flex-col gap-2 border-t border-[var(--chef-border)] pt-3 sm:flex-row sm:items-center">
+          <label className="text-xs font-medium text-[var(--chef-muted)] shrink-0">
+            Corriger l’étape
+          </label>
+          <select
+            className="h-9 flex-1 rounded-lg border border-[var(--chef-border)] bg-white px-2 text-sm outline-none focus:border-[var(--chef-primary)]"
+            disabled={busy}
+            value={jeune.etape_courante || ''}
+            onChange={(e) => {
+              const value = e.target.value
+              if (!value) return
+              onAssignEtape(jeune.id, Number(value))
+            }}
+          >
+            <option value="" disabled>
+              Choisir une étape…
+            </option>
+            {stages.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.titre}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
     </li>
   )
 }
@@ -64,6 +112,7 @@ function JeuneRow({ jeune, pending, onAccept, onReject, busyId }) {
 export default function CcJeunes() {
   const [pending, setPending] = useState([])
   const [actifs, setActifs] = useState([])
+  const [stages, setStages] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState(null)
@@ -72,7 +121,13 @@ export default function CcJeunes() {
     setError('')
     setLoading(true)
     try {
+      let st = await fetchCcStages()
+      if (!Array.isArray(st) || st.length === 0) {
+        const init = await initCcStages()
+        st = init.stages || []
+      }
       const [p, a] = await Promise.all([fetchPendingJeunes(), fetchActiveJeunes()])
+      setStages(Array.isArray(st) ? st : [])
       setPending(asList(p))
       setActifs(asList(a))
     } catch (err) {
@@ -112,12 +167,25 @@ export default function CcJeunes() {
     }
   }
 
+  async function onAssignEtape(jeuneId, etapeId) {
+    setBusyId(jeuneId)
+    setError('')
+    try {
+      await assignJeuneEtape(jeuneId, etapeId)
+      await load()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Correction d’étape impossible.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Jeunes</h1>
         <p className="mt-2 text-sm text-[var(--chef-muted)]">
-          Valide les inscriptions jeunes de ta communauté.
+          Valide les inscriptions et corrige l’étape de départ si besoin.
         </p>
       </div>
 
@@ -152,9 +220,11 @@ export default function CcJeunes() {
                 key={jeune.id}
                 jeune={jeune}
                 pending
+                stages={stages}
                 busyId={busyId}
                 onAccept={onAccept}
                 onReject={onReject}
+                onAssignEtape={onAssignEtape}
               />
             ))}
           </ul>
@@ -179,7 +249,13 @@ export default function CcJeunes() {
         ) : (
           <ul className="space-y-2">
             {actifs.map((jeune) => (
-              <JeuneRow key={jeune.id} jeune={jeune} busyId={null} />
+              <JeuneRow
+                key={jeune.id}
+                jeune={jeune}
+                stages={stages}
+                busyId={busyId}
+                onAssignEtape={onAssignEtape}
+              />
             ))}
           </ul>
         )}

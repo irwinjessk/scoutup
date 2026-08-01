@@ -45,7 +45,7 @@ export default function OAuthCallback() {
         if (cancelled) return
         sessionStorage.removeItem('scoutup.oauth.tiktok')
         acceptSession(data.user, data.tokens)
-        navigate(homeForRole(data.user.role), { replace: true })
+        navigate(homeForRole(data.user.role, data.user), { replace: true })
       } catch (e) {
         if (cancelled) return
         if (e instanceof ApiError && e.status === 403) {

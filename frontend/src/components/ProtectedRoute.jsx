@@ -1,7 +1,7 @@
-import { Navigate, Outlet } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 
 import { useAuth } from '@/context/AuthContext'
-import { homeForRole, isPendingStatus } from '@/lib/authRoutes'
+import { homeForRole, isPendingStatus, needsEtapePlacement } from '@/lib/authRoutes'
 
 /**
  * Protège une zone : session requise, statut validé, rôle autorisé.
@@ -9,6 +9,7 @@ import { homeForRole, isPendingStatus } from '@/lib/authRoutes'
  */
 export function ProtectedRoute({ roles }) {
   const { user, isAuthenticated, bootstrapping } = useAuth()
+  const location = useLocation()
 
   if (bootstrapping) {
     return (
@@ -27,7 +28,17 @@ export function ProtectedRoute({ roles }) {
   }
 
   if (roles?.length && !roles.includes(user.role)) {
-    return <Navigate to={homeForRole(user.role)} replace />
+    return <Navigate to={homeForRole(user.role, user)} replace />
+  }
+
+  const onPlacement =
+    location.pathname === '/jeune/placement' ||
+    location.pathname.endsWith('/jeune/placement')
+  if (needsEtapePlacement(user) && !onPlacement) {
+    return <Navigate to="/jeune/placement" replace />
+  }
+  if (!needsEtapePlacement(user) && onPlacement) {
+    return <Navigate to="/jeune" replace />
   }
 
   return <Outlet />
@@ -49,7 +60,7 @@ export function GuestRoute() {
     if (isPendingStatus(user.status || user.statut)) {
       return <Navigate to="/attente-validation" replace />
     }
-    return <Navigate to={homeForRole(user.role)} replace />
+    return <Navigate to={homeForRole(user.role, user)} replace />
   }
 
   return <Outlet />

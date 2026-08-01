@@ -32,6 +32,7 @@ import JeuneEvaluation from '@/pages/jeune/Evaluation'
 import JeuneFormation from '@/pages/jeune/Formation'
 import JeuneGenieRoute from '@/pages/jeune/GenieRoute'
 import JeuneHome from '@/pages/jeune/Home'
+import JeunePlacement from '@/pages/jeune/Placement'
 import JeuneQuiz from '@/pages/jeune/Quiz'
 
 function AppRoutes() {
@@ -49,6 +50,7 @@ function AppRoutes() {
         </Route>
 
         <Route element={<ProtectedRoute roles={['JEUNE']} />}>
+          <Route path="/jeune/placement" element={<JeunePlacement />} />
           <Route path="/jeune" element={<JeuneLayout />}>
             <Route index element={<JeuneHome />} />
             <Route path="formation" element={<JeuneFormation />} />
