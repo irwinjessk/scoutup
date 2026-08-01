@@ -21,7 +21,7 @@ export default function Login() {
     setLoading(true)
     try {
       const user = await login({ email, password })
-      navigate(homeForRole(user.role), { replace: true })
+      navigate(homeForRole(user.role, user), { replace: true })
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         navigate('/attente-validation', { replace: true })
@@ -92,7 +92,7 @@ export default function Login() {
           className="mt-6"
           onSuccess={(data) => {
             acceptSession(data.user, data.tokens)
-            navigate(homeForRole(data.user.role), { replace: true })
+            navigate(homeForRole(data.user.role, data.user), { replace: true })
           }}
           onPending={() => navigate('/attente-validation', { replace: true })}
           onError={setError}

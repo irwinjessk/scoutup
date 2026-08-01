@@ -106,7 +106,7 @@ class MeView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsActif]
 
     def get_object(self):
-        return self.request.user
+        return User.objects.select_related('etape_courante').get(pk=self.request.user.pk)
 
     def get_serializer_class(self):
         if self.request.method in ('PUT', 'PATCH'):
@@ -123,7 +123,7 @@ class CCJeunesPendingView(generics.ListAPIView):
             role=Role.JEUNE,
             statut=StatutCompte.EN_ATTENTE,
             communaute_id=self.request.user.communaute_id,
-        )
+        ).select_related('etape_courante')
 
 
 class CCJeunesListView(generics.ListAPIView):
@@ -135,7 +135,7 @@ class CCJeunesListView(generics.ListAPIView):
             role=Role.JEUNE,
             statut=StatutCompte.ACTIF,
             communaute_id=self.request.user.communaute_id,
-        )
+        ).select_related('etape_courante')
 
 
 class CCJeuneAcceptView(APIView):
@@ -171,14 +171,14 @@ class CCJeuneRejectView(APIView):
 
 
 class CCJeuneEtapeView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsCC]
+    permission_classes = [permissions.IsAuthenticated, IsActif, IsCC]
 
     def patch(self, request, pk):
         jeune = User.objects.filter(
             pk=pk,
             role=Role.JEUNE,
             communaute_id=request.user.communaute_id,
-        ).first()
+        ).select_related('etape_courante').first()
         if not jeune:
             return Response({'detail': 'Jeune introuvable.'}, status=status.HTTP_404_NOT_FOUND)
         serializer = AssignEtapeSerializer(
@@ -186,7 +186,7 @@ class CCJeuneEtapeView(APIView):
             context={'request': request, 'jeune': jeune},
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        jeune = serializer.save()
         return Response(JeuneListSerializer(jeune).data)
 
 
@@ -261,18 +261,23 @@ class CGJeunesListView(generics.ListAPIView):
 
 
 class JeuneEtapesListView(generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsJeune]
+    permission_classes = [permissions.IsAuthenticated, IsActif, IsJeune]
     serializer_class = StageSerializer
 
     def get_queryset(self):
+        user = self.request.user
+        if user.communaute_id:
+            from formation.services import ensure_default_stages
+
+            ensure_default_stages(user.communaute)
         return Stage.objects.filter(
-            communaute_id=self.request.user.communaute_id,
+            communaute_id=user.communaute_id,
             actif=True,
-        )
+        ).order_by('ordre')
 
 
 class JeuneEtapeCouranteView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsJeune]
+    permission_classes = [permissions.IsAuthenticated, IsActif, IsJeune]
 
     def post(self, request):
         serializer = EtapeCouranteSerializer(data=request.data, context={'request': request})

@@ -80,6 +80,8 @@ class User(AbstractUser):
         blank=True,
         related_name='jeunes',
     )
+    # Une fois renseigné, le jeune ne peut plus changer seul son placement.
+    etape_placee_le = models.DateTimeField(null=True, blank=True)
 
     valide_par = models.ForeignKey(
         'self',

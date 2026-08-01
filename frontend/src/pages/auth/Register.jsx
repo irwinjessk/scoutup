@@ -163,7 +163,7 @@ export default function Register() {
               role={form.role}
               onSuccess={(data) => {
                 acceptSession(data.user, data.tokens)
-                navigate(homeForRole(data.user.role), { replace: true })
+                navigate(homeForRole(data.user.role, data.user), { replace: true })
               }}
               onPending={() => navigate('/attente-validation', { replace: true })}
               onError={setError}

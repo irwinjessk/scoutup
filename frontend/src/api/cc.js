@@ -15,3 +15,10 @@ export function acceptJeune(id) {
 export function rejectJeune(id) {
   return apiFetch(`cc/jeunes/${id}/reject/`, { method: 'POST' })
 }
+
+export function assignJeuneEtape(jeuneId, etapeId) {
+  return apiFetch(`cc/jeunes/${jeuneId}/etape/`, {
+    method: 'PATCH',
+    body: JSON.stringify({ etape_id: etapeId }),
+  })
+}

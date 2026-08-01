@@ -121,10 +121,21 @@ def start_formation(jeune, stage_id: int | None = None) -> FormationProgress:
         raise FormationError('Aucune étape disponible.', status=404)
 
     progress = FormationProgress.objects.filter(jeune=jeune, stage=stage).first()
-    if progress and progress.statut == ProgressStatut.VERROUILLE:
-        raise FormationError('Cette étape est verrouillée (RF-19).', status=403)
+    if progress and progress.statut in (
+        ProgressStatut.VERROUILLE,
+        ProgressStatut.ACQUIS,
+    ):
+        raise FormationError(
+            'Cette étape n’est plus accessible.',
+            status=403,
+        )
 
     if progress is None:
+        if not jeune.etape_placee_le:
+            raise FormationError(
+                'Choisis d’abord ton étape de départ.',
+                status=403,
+            )
         previous = Stage.objects.filter(
             communaute_id=jeune.communaute_id,
             ordre=stage.ordre - 1,
@@ -134,7 +145,7 @@ def start_formation(jeune, stage_id: int | None = None) -> FormationProgress:
             prev_ok = FormationProgress.objects.filter(
                 jeune=jeune,
                 stage=previous,
-                statut=ProgressStatut.VALIDE,
+                statut__in=[ProgressStatut.VALIDE, ProgressStatut.ACQUIS],
             ).exists()
             if not prev_ok:
                 raise FormationError(
@@ -194,8 +205,8 @@ def next_question(jeune) -> tuple[FormationProgress, Question | None, dict]:
     progress = FormationProgress.objects.filter(jeune=jeune, stage=stage).first()
     if progress is None:
         progress = start_formation(jeune, stage.id)
-    if progress.statut == ProgressStatut.VERROUILLE:
-        raise FormationError('Étape verrouillée.', status=403)
+    if progress.statut in (ProgressStatut.VERROUILLE, ProgressStatut.ACQUIS):
+        raise FormationError('Étape non accessible.', status=403)
     if progress.statut == ProgressStatut.VALIDE:
         return progress, None, scarf
 
@@ -286,8 +297,11 @@ def complete_stage(jeune, progress: FormationProgress):
         actif=True,
     ).first()
     if previous:
-        FormationProgress.objects.filter(jeune=jeune, stage=previous).exclude(
-            statut=ProgressStatut.VERROUILLE,
+        # Verrouille l'étape N-1 validée ; les ACQUIS (placement) restent acquis.
+        FormationProgress.objects.filter(
+            jeune=jeune,
+            stage=previous,
+            statut=ProgressStatut.VALIDE,
         ).update(statut=ProgressStatut.VERROUILLE)
 
     nxt = Stage.objects.filter(

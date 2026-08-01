@@ -79,6 +79,8 @@ class UserSerializer(serializers.ModelSerializer):
     nom_complet = serializers.CharField(read_only=True)
     is_actif = serializers.BooleanField(read_only=True)
     foulard = serializers.SerializerMethodField()
+    etape_placee = serializers.SerializerMethodField()
+    etape_courante_titre = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -97,12 +99,23 @@ class UserSerializer(serializers.ModelSerializer):
             'groupe',
             'communaute',
             'etape_courante',
+            'etape_courante_titre',
+            'etape_placee',
+            'etape_placee_le',
             'auth_provider',
             'is_actif',
             'foulard',
             'created_at',
         )
         read_only_fields = fields
+
+    def get_etape_placee(self, obj):
+        return bool(obj.etape_placee_le)
+
+    def get_etape_courante_titre(self, obj):
+        if obj.etape_courante_id:
+            return obj.etape_courante.titre
+        return None
 
     def get_foulard(self, obj):
         if obj.role != Role.JEUNE:
@@ -123,6 +136,8 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
 class JeuneListSerializer(serializers.ModelSerializer):
     nom_complet = serializers.CharField(read_only=True)
+    etape_courante_titre = serializers.SerializerMethodField()
+    etape_placee = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -135,9 +150,18 @@ class JeuneListSerializer(serializers.ModelSerializer):
             'nom_complet',
             'statut',
             'etape_courante',
+            'etape_courante_titre',
+            'etape_placee',
+            'etape_placee_le',
             'created_at',
             'valide_le',
         )
+
+    def get_etape_courante_titre(self, obj):
+        return obj.etape_courante.titre if obj.etape_courante_id else None
+
+    def get_etape_placee(self, obj):
+        return bool(obj.etape_placee_le)
 
 
 class CCListSerializer(serializers.ModelSerializer):
@@ -174,11 +198,14 @@ class EtapeCouranteSerializer(serializers.Serializer):
         return stage.pk
 
     def save(self, **kwargs):
+        from formation.services import FormationError, place_jeune_at_stage
+
         user = self.context['request'].user
         stage = Stage.objects.get(pk=self.validated_data['etape_id'])
-        user.etape_courante = stage
-        user.save(update_fields=['etape_courante', 'updated_at'])
-        return user
+        try:
+            return place_jeune_at_stage(user, stage, by_cc=False)
+        except FormationError as exc:
+            raise serializers.ValidationError(exc.message) from exc
 
 
 class StageSerializer(serializers.ModelSerializer):
@@ -216,10 +243,18 @@ class AssignEtapeSerializer(serializers.Serializer):
         return attrs
 
     def save(self, **kwargs):
+        from formation.services import FormationError, place_jeune_at_stage
+
         jeune = self.context['jeune']
-        jeune.etape_courante = self.validated_data['stage']
-        jeune.save(update_fields=['etape_courante', 'updated_at'])
-        return jeune
+        try:
+            return place_jeune_at_stage(
+                jeune,
+                self.validated_data['stage'],
+                by_cc=True,
+            )
+        except FormationError as exc:
+            raise serializers.ValidationError(exc.message) from exc
+
 
 
 def activer_compte(user, validateur):

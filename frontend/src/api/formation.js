@@ -4,6 +4,17 @@ import { getAccessToken } from '@/stores/auth'
 
 /** ── Jeune ─────────────────────────────────────────── */
 
+export function fetchEtapes() {
+  return apiFetch('jeune/etapes/')
+}
+
+export function chooseEtape(etapeId) {
+  return apiFetch('jeune/etape-courante/', {
+    method: 'POST',
+    body: JSON.stringify({ etape_id: etapeId }),
+  })
+}
+
 export function fetchFormationOverview() {
   return apiFetch('jeune/formation/')
 }

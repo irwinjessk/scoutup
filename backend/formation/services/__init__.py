@@ -1,5 +1,6 @@
 from .certificates import deliver_certificate
 from .grading import check_answer
+from .placement import place_jeune_at_stage
 from .progress import (
     FormationError,
     answer_question,
@@ -17,5 +18,6 @@ __all__ = [
     'ensure_default_stages',
     'next_question',
     'overview_for_jeune',
+    'place_jeune_at_stage',
     'start_formation',
 ]
