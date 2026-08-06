@@ -132,6 +132,10 @@ class CCQuestionDetailView(APIView):
             .first()
         )
 
+    def _refresh_stage_count(self, stage):
+        stage.nb_questions_parcours = Question.objects.filter(stage=stage, actif=True).count()
+        stage.save(update_fields=['nb_questions_parcours'])
+
     def put(self, request, pk):
         question = self._get(request, pk)
         if not question:
@@ -139,6 +143,7 @@ class CCQuestionDetailView(APIView):
         serializer = QuestionSerializer(question, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        self._refresh_stage_count(question.stage)
         return Response(QuestionSerializer(question).data)
 
     def patch(self, request, pk):
@@ -148,20 +153,18 @@ class CCQuestionDetailView(APIView):
         serializer = QuestionSerializer(question, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        stage = question.stage
-        stage.nb_questions_parcours = Question.objects.filter(stage=stage, actif=True).count()
-        stage.save(update_fields=['nb_questions_parcours'])
+        self._refresh_stage_count(question.stage)
         return Response(QuestionSerializer(question).data)
 
     def delete(self, request, pk):
+        """Désactive plutôt que supprimer (soft-delete métier)."""
         question = self._get(request, pk)
         if not question:
             return Response({'detail': 'Question introuvable.'}, status=status.HTTP_404_NOT_FOUND)
-        stage = question.stage
-        question.delete()
-        stage.nb_questions_parcours = Question.objects.filter(stage=stage, actif=True).count()
-        stage.save(update_fields=['nb_questions_parcours'])
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        question.actif = False
+        question.save(update_fields=['actif', 'updated_at'])
+        self._refresh_stage_count(question.stage)
+        return Response(QuestionSerializer(question).data)
 
 
 # ── Jeune ───────────────────────────────────────────────────────────

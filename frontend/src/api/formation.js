@@ -130,6 +130,7 @@ export function updateCcQuestion(id, payload) {
   })
 }
 
-export function deleteCcQuestion(id) {
-  return apiFetch(`cc/questions/${id}/`, { method: 'DELETE' })
+/** Soft-delete métier : désactive la question (jeune ne la voit plus). */
+export function deactivateCcQuestion(id) {
+  return updateCcQuestion(id, { actif: false })
 }
