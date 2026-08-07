@@ -181,11 +181,13 @@ def build_brevet_pdf(
 
     mama = _img('logo-mama.png')
     badge = _img('logo-badge.png')
-    logo_cy = height - 88
+    # Logos haut : taille égale et bien visibles (sans fond noir)
+    logo_size = 96
+    logo_cy = height - 95
     if mama:
-        _draw_image(c, mama, 78, logo_cy, 72, 72)
+        _draw_image(c, mama, 90, logo_cy, logo_size, logo_size)
     if badge:
-        _draw_image(c, badge, 165, logo_cy, 72, 72)
+        _draw_image(c, badge, 210, logo_cy, logo_size, logo_size)
     if not mama and not badge:
         c.setFillColor(HexColor('#0073e6'))
         c.setFont('Helvetica-Bold', 16)
@@ -201,7 +203,7 @@ def build_brevet_pdf(
 
     c.setFillColor(HexColor('#4B5563'))
     c.setFont('Helvetica', 11)
-    c.drawString(48, height - 145, date_str)
+    c.drawString(48, height - 160, date_str)
 
     full_name = f'{(prenoms or "").strip()} {(nom or "").strip()}'.strip() or 'Routier'
     c.setFillColor(black)
@@ -210,15 +212,15 @@ def build_brevet_pdf(
     name = full_name
     while c.stringWidth(name, 'Times-Bold', 28) > max_name_w and len(name) > 3:
         name = name[:-4] + '…'
-    c.drawString(48, height - 195, name)
+    c.drawString(48, height - 208, name)
 
     c.setFont('Helvetica', 12)
     c.setFillColor(HexColor('#374151'))
-    c.drawString(48, height - 220, 'a validé avec succès')
+    c.drawString(48, height - 232, 'a validé avec succès')
 
     c.setFillColor(black)
     c.setFont('Times-Bold', 18)
-    c.drawString(48, height - 250, stage_titre or 'Formation Route')
+    c.drawString(48, height - 260, stage_titre or 'Formation Route')
 
     c.setFont('Helvetica', 10)
     c.setFillColor(HexColor('#4B5563'))
@@ -238,7 +240,7 @@ def build_brevet_pdf(
             cur = w
     if cur:
         lines.append(cur)
-    y = height - 275
+    y = height - 285
     for line in lines[:3]:
         c.drawString(48, y, line)
         y -= 14
