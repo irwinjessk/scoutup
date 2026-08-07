@@ -12,7 +12,7 @@ from ..models import Certificate
 from ..pdf import build_brevet_pdf
 
 # Incrémenter pour forcer la régénération des PDF existants après un nouveau template.
-TEMPLATE_VERSION = 3
+TEMPLATE_VERSION = 4
 
 
 def _cg_display_name(jeune) -> str:
