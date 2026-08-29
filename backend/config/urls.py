@@ -14,5 +14,6 @@ urlpatterns = [
     path('api/v1/', include('api.urls')),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Stockage local (pas de S3/CDN) : servir /media/ même hors DEBUG,
+# sinon les fichiers uploadés (avatars, brevets) sont introuvables en prod.
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
