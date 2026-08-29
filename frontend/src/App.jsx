@@ -24,6 +24,7 @@ import CcPresences from '@/pages/cc/Presences'
 import CgChefs from '@/pages/cg/Chefs'
 import CgContenus from '@/pages/cg/Contenus'
 import CgDashboard from '@/pages/cg/Dashboard'
+import CgFormations from '@/pages/cg/Formations'
 import CgJeunes from '@/pages/cg/Jeunes'
 import CgJournal from '@/pages/cg/Journal'
 import JeuneBrevets from '@/pages/jeune/Brevets'
@@ -77,6 +78,7 @@ function AppRoutes() {
           <Route path="/cg" element={<CgLayout />}>
             <Route index element={<CgDashboard />} />
             <Route path="chefs" element={<CgChefs />} />
+            <Route path="formations" element={<CgFormations />} />
             <Route path="jeunes" element={<CgJeunes />} />
             <Route path="contenus" element={<CgContenus />} />
             <Route path="journal" element={<CgJournal />} />

@@ -1,4 +1,4 @@
-import { apiFetch } from '@/api/client'
+import { apiFetch, apiFetchForm } from '@/api/client'
 
 export function loginRequest({ email, password }) {
   return apiFetch('auth/login/', {
@@ -18,6 +18,26 @@ export function registerRequest(payload) {
 
 export function fetchMe() {
   return apiFetch('auth/me/')
+}
+
+export function updateMe(payload) {
+  const { avatar, ...rest } = payload
+
+  if (avatar instanceof File) {
+    const formData = new FormData()
+    Object.entries(rest).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        formData.append(key, value)
+      }
+    })
+    formData.append('avatar', avatar)
+    return apiFetchForm('auth/me/', formData, { method: 'PATCH' })
+  }
+
+  return apiFetch('auth/me/', {
+    method: 'PATCH',
+    body: JSON.stringify(rest),
+  })
 }
 
 export function logoutRequest(refresh) {

@@ -8,6 +8,10 @@ export function fetchActiveCCs() {
   return apiFetch('cg/cc/')
 }
 
+export function fetchCGFormations() {
+  return apiFetch('cg/formations/')
+}
+
 export function acceptCC(id) {
   return apiFetch(`cg/cc/${id}/accept/`, { method: 'POST' })
 }

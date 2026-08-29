@@ -1,5 +1,6 @@
 import {
   BookMarked,
+  BookOpen,
   LayoutDashboard,
   ScrollText,
   UserCog,
@@ -12,6 +13,7 @@ const ITEMS = [
   { to: '/cg', label: 'Tableau de bord', icon: LayoutDashboard, end: true },
   { to: '/cg/chefs', label: 'Chefs', icon: UserCog },
   { to: '/cg/jeunes', label: 'Jeunes', icon: Users },
+  { to: '/cg/formations', label: 'Formations', icon: BookOpen },
   { to: '/cg/contenus', label: 'Contenus', icon: BookMarked },
   { to: '/cg/journal', label: 'Journal', icon: ScrollText },
 ]
