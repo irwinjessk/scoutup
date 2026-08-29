@@ -1,5 +1,6 @@
 from django.contrib.auth import authenticate, get_user_model
 from rest_framework import generics, permissions, status
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -104,6 +105,7 @@ class LogoutView(APIView):
 
 class MeView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsActif]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get_object(self):
         return User.objects.select_related('etape_courante').get(pk=self.request.user.pk)
@@ -112,6 +114,16 @@ class MeView(generics.RetrieveUpdateAPIView):
         if self.request.method in ('PUT', 'PATCH'):
             return UserUpdateSerializer
         return UserSerializer
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(
+            UserSerializer(instance, context=self.get_serializer_context()).data
+        )
 
 
 class CCJeunesPendingView(generics.ListAPIView):

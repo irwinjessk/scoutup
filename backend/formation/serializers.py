@@ -80,11 +80,18 @@ class QuestionPublicSerializer(serializers.ModelSerializer):
 
 
 class FormationProgressSerializer(serializers.ModelSerializer):
+    stage_titre = serializers.CharField(source='stage.titre', read_only=True)
+    stage_code = serializers.CharField(source='stage.code', read_only=True)
+    stage_ordre = serializers.IntegerField(source='stage.ordre', read_only=True)
+
     class Meta:
         model = FormationProgress
         fields = (
             'id',
             'stage',
+            'stage_titre',
+            'stage_code',
+            'stage_ordre',
             'statut',
             'nb_reussies',
             'nb_total',

@@ -131,7 +131,20 @@ class UserSerializer(serializers.ModelSerializer):
 class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('nom', 'prenoms', 'date_naissance', 'genre', 'avatar')
+        fields = ('nom', 'prenoms', 'telephone', 'date_naissance', 'genre', 'avatar')
+
+    def validate_telephone(self, value):
+        phone = (value or '').strip().replace(' ', '')
+        if not phone.startswith('+') or not phone[1:].isdigit() or len(phone) < 10:
+            raise serializers.ValidationError(
+                'Numéro invalide. Utilise le format international (ex. +2250700000000).'
+            )
+        qs = User.objects.filter(telephone=phone)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('Ce numéro est déjà utilisé.')
+        return phone
 
 
 class JeuneListSerializer(serializers.ModelSerializer):

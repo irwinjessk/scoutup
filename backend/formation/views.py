@@ -326,7 +326,7 @@ class CGFormationsView(APIView):
             role=Role.JEUNE,
             statut=StatutCompte.ACTIF,
             groupe_id=request.user.groupe_id,
-        )
+        ).select_related('etape_courante')
         rows = []
         for jeune in jeunes:
             progs = FormationProgress.objects.filter(jeune=jeune).select_related('stage')
@@ -336,6 +336,9 @@ class CGFormationsView(APIView):
                     'nom_complet': jeune.nom_complet,
                     'email': jeune.email,
                     'etape_courante': jeune.etape_courante_id,
+                    'etape_courante_titre': (
+                        jeune.etape_courante.titre if jeune.etape_courante_id else None
+                    ),
                     'progressions': FormationProgressSerializer(progs, many=True).data,
                 }
             )

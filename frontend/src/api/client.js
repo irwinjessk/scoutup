@@ -64,6 +64,45 @@ export async function apiFetch(path, options = {}) {
   return response.json()
 }
 
+/**
+ * Requête multipart (ex. upload avatar).
+ * @param {string} path
+ * @param {FormData} formData
+ * @param {{ method?: string, auth?: boolean }} [options]
+ */
+export async function apiFetchForm(path, formData, options = {}) {
+  const { auth = true, method = 'PATCH', headers: customHeaders, ...rest } = options
+  const url = `${env.apiUrl.replace(/\/$/, '')}/api/v1/${path.replace(/^\//, '')}`
+
+  const headers = {
+    Accept: 'application/json',
+    ...customHeaders,
+  }
+
+  if (auth) {
+    const token = getAccessToken()
+    if (token) headers.Authorization = `Bearer ${token}`
+  }
+
+  const response = await fetch(url, {
+    method,
+    ...rest,
+    headers,
+    body: formData,
+  })
+
+  if (response.status === 401 && auth) {
+    clearAuth()
+  }
+
+  if (!response.ok) {
+    throw await parseError(response)
+  }
+
+  if (response.status === 204) return null
+  return response.json()
+}
+
 export async function refreshAccessToken() {
   const refresh = getRefreshToken()
   if (!refresh) return null
