@@ -12,11 +12,12 @@ import {
 import logoScoutUp from '@/assets/brand/logo-scoutup.png'
 import FoulardIndicator from '@/components/FoulardIndicator'
 import { PageMotion } from '@/components/layout/PageMotion'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { useAuth } from '@/context/AuthContext'
 import { gsap, useGSAP } from '@/lib/gsap'
+import { mediaUrl } from '@/lib/media'
 import { cn } from '@/lib/utils'
 
 const NAV = [
@@ -79,6 +80,9 @@ export default function JeuneLayout() {
         <div className="flex items-center gap-2">
           <FoulardIndicator />
           <Avatar size="sm" className="border border-white/10 bg-white/10">
+            {user?.avatar ? (
+              <AvatarImage src={mediaUrl(user.avatar)} alt="" className="object-cover" />
+            ) : null}
             <AvatarFallback className="bg-transparent text-[10px] text-white">
               {initials(user)}
             </AvatarFallback>
