@@ -2,10 +2,10 @@ import { useRef } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   BookOpen,
+  ClipboardCheck,
   Home,
   LogOut,
   Route,
-  Trophy,
   UserRound,
 } from 'lucide-react'
 
@@ -23,8 +23,8 @@ import { cn } from '@/lib/utils'
 const NAV = [
   { to: '/jeune', label: 'Accueil', icon: Home, end: true },
   { to: '/jeune/formation', label: 'Formation', icon: BookOpen },
-  { to: '/jeune/quiz', label: 'Quiz', icon: Trophy },
   { to: '/jeune/genie-route', label: 'Génie', icon: Route },
+  { to: '/jeune/evaluation', label: 'Évaluation', icon: ClipboardCheck },
   { to: '/jeune/compte', label: 'Compte', icon: UserRound },
 ]
 
