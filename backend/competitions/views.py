@@ -294,6 +294,7 @@ class CGCompetitionsView(APIView):
         nb_actifs_par_communaute = {}
         rows = []
         for competition in competitions:
+            sync_closure(competition)
             communaute_id = competition.communaute_id
             if communaute_id not in nb_actifs_par_communaute:
                 nb_actifs_par_communaute[communaute_id] = User.objects.filter(
