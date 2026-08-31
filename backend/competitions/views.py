@@ -319,3 +319,36 @@ class CGCompetitionsView(APIView):
                 }
             )
         return Response(rows)
+
+
+# ── Public (lien partageable, RF-44) ──────────────────────────────────
+
+
+class CompetitionShareView(APIView):
+    """Page publique du lien partageable, générée à la clôture — aucune
+    authentification requise, pensée pour un partage réseaux sociaux."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, token):
+        competition = (
+            Competition.objects.filter(partage_token=token, statut=CompetitionStatut.CLOTUREE)
+            .select_related('communaute')
+            .first()
+        )
+        if not competition:
+            return Response(
+                {'detail': 'Lien introuvable ou compétition non clôturée.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        classement = build_classement(competition)
+        return Response(
+            {
+                'titre': competition.titre,
+                'communaute': competition.communaute.nom,
+                'nb_participants': len(classement),
+                'closes_at': competition.closes_at,
+                'podium': classement[:3],
+            }
+        )

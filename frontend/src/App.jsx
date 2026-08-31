@@ -37,6 +37,7 @@ import JeuneGenieRoute from '@/pages/jeune/GenieRoute'
 import JeuneHome from '@/pages/jeune/Home'
 import JeunePlacement from '@/pages/jeune/Placement'
 import JeuneQuiz from '@/pages/jeune/Quiz'
+import GenieRoutePartage from '@/pages/public/GenieRoutePartage'
 
 function AppRoutes() {
   return (
@@ -46,6 +47,7 @@ function AppRoutes() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/attente-validation" element={<PendingValidation />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
+        <Route path="/genie-route/partage/:token" element={<GenieRoutePartage />} />
 
         <Route element={<GuestRoute />}>
           <Route path="/connexion" element={<Login />} />

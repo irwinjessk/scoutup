@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import { Check, Copy, Plus, Share2, X } from 'lucide-react'
 
 import {
   closeCcCompetition,
@@ -27,6 +27,53 @@ function formatDate(value) {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+function buildShareUrl(token) {
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/')
+  return `${window.location.origin}${base}genie-route/partage/${token}`
+}
+
+function ShareLink({ token }) {
+  const [copied, setCopied] = useState(false)
+  const url = buildShareUrl(token)
+
+  async function onCopy() {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      /* clipboard indisponible — le lien reste sélectionnable manuellement */
+    }
+  }
+
+  return (
+    <div className="mt-3 flex items-center gap-2 rounded-xl border border-[var(--chef-border)] bg-[#fafafa] px-3 py-2">
+      <Share2 className="size-3.5 shrink-0 text-[var(--chef-muted)]" />
+      <input
+        readOnly
+        value={url}
+        onFocus={(e) => e.target.select()}
+        className="min-w-0 flex-1 truncate bg-transparent text-xs text-[var(--chef-ink)] outline-none"
+      />
+      <button
+        type="button"
+        onClick={onCopy}
+        className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-[var(--chef-primary)] hover:underline"
+      >
+        {copied ? (
+          <>
+            <Check className="size-3.5" /> Copié
+          </>
+        ) : (
+          <>
+            <Copy className="size-3.5" /> Copier
+          </>
+        )}
+      </button>
+    </div>
+  )
 }
 
 const TYPES = [
@@ -600,6 +647,10 @@ export default function CcGenieRoute() {
                   ) : null}
                 </div>
               </div>
+
+              {comp.statut === 'CLOTUREE' && comp.partage_token ? (
+                <ShareLink token={comp.partage_token} />
+              ) : null}
 
               {classementFor === comp.id ? (
                 <div className="mt-4 border-t border-[var(--chef-border)] pt-4">

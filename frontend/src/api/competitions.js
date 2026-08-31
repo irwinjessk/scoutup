@@ -66,3 +66,9 @@ export function fetchJeuneCompetitionClassement(id) {
 export function fetchCgCompetitions() {
   return apiFetch('cg/competitions/')
 }
+
+/** ── Public (lien partageable) ─────────────────────────── */
+
+export function fetchCompetitionShare(token) {
+  return apiFetch(`partage/competitions/${token}/`, { auth: false })
+}

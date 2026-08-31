@@ -7,6 +7,7 @@ from .views import (
     CCCompetitionListCreateView,
     CCCompetitionPublishView,
     CGCompetitionsView,
+    CompetitionShareView,
     JeuneCompetitionAnswerView,
     JeuneCompetitionClassementView,
     JeuneCompetitionJoinView,
@@ -63,4 +64,10 @@ urlpatterns = [
     ),
     # CG
     path('cg/competitions/', CGCompetitionsView.as_view(), name='cg-competitions'),
+    # Public
+    path(
+        'partage/competitions/<str:token>/',
+        CompetitionShareView.as_view(),
+        name='competition-share',
+    ),
 ]

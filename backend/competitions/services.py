@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import secrets
+
 from django.db import transaction
 from django.utils import timezone
 
@@ -26,8 +28,14 @@ def sync_closure(competition: Competition) -> None:
 
 
 def close_competition(competition: Competition) -> None:
+    """Fige le classement final et clôt la participation (RF-44) : génère le lien
+    partageable à cette occasion, une seule fois."""
     competition.statut = CompetitionStatut.CLOTUREE
-    competition.save(update_fields=['statut'])
+    update_fields = ['statut']
+    if not competition.partage_token:
+        competition.partage_token = secrets.token_urlsafe(9)
+        update_fields.append('partage_token')
+    competition.save(update_fields=update_fields)
 
 
 def join_competition(jeune, competition: Competition) -> CompetitionAttempt:
