@@ -8,4 +8,5 @@ urlpatterns = [
     path('', include(('formation.urls', 'formation'))),
     path('', include(('evaluations.urls', 'evaluations'))),
     path('', include(('competitions.urls', 'competitions'))),
+    path('', include(('activity.urls', 'activity'))),
 ]
