@@ -134,8 +134,7 @@ export default function JeuneEvaluation() {
   const remainingMs = session ? new Date(session.closesAt).getTime() - now : null
   const expired = remainingMs != null && remainingMs <= 0
 
-  async function onSubmit(e) {
-    e.preventDefault()
+  async function submitAnswers() {
     if (!session || busy) return
     setBusy(true)
     setError('')
@@ -154,6 +153,18 @@ export default function JeuneEvaluation() {
       setBusy(false)
     }
   }
+
+  function onSubmit(e) {
+    e.preventDefault()
+    submitAnswers()
+  }
+
+  useEffect(() => {
+    if (expired && session) {
+      submitAnswers()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expired])
 
   if (result) {
     return (
@@ -210,7 +221,7 @@ export default function JeuneEvaluation() {
 
         {expired ? (
           <p className="rounded-xl border border-[#ff3131]/30 bg-[#ff3131]/10 px-3 py-2 text-sm text-[#ff8a8a]">
-            Temps écoulé — soumets tes réponses maintenant.
+            Temps écoulé — envoi automatique de tes réponses…
           </p>
         ) : null}
 

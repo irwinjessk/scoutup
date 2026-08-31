@@ -368,6 +368,7 @@ class JeuneEvaluationAttemptDetailView(APIView):
             for row in data:
                 row['reponse_attendue'] = None
                 row['est_correcte'] = None
+                row['points_obtenus'] = None
 
         return Response(
             {
