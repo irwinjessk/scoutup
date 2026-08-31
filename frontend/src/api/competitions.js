@@ -6,6 +6,10 @@ export function fetchCcCompetitions() {
   return apiFetch('cc/competitions/')
 }
 
+export function fetchCcCompetitionDetail(id) {
+  return apiFetch(`cc/competitions/${id}/`)
+}
+
 export function createCcCompetition(payload) {
   return apiFetch('cc/competitions/', {
     method: 'POST',

@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import permissions, status
 from rest_framework.response import Response
@@ -12,6 +13,7 @@ from .models import Competition, CompetitionAttempt, CompetitionStatut
 from .serializers import (
     MIN_QUESTIONS,
     CompetitionCreateSerializer,
+    CompetitionDetailSerializer,
     CompetitionQuestionPublicSerializer,
     CompetitionSerializer,
     CompetitionUpdateSerializer,
@@ -54,7 +56,17 @@ class CCCompetitionDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsActif, IsCC]
 
     def _get(self, request, pk):
-        return Competition.objects.filter(pk=pk, communaute_id=request.user.communaute_id).first()
+        return (
+            Competition.objects.filter(pk=pk, communaute_id=request.user.communaute_id)
+            .prefetch_related('questions')
+            .first()
+        )
+
+    def get(self, request, pk):
+        competition = self._get(request, pk)
+        if not competition:
+            return Response({'detail': 'Compétition introuvable.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(CompetitionDetailSerializer(competition).data)
 
     def put(self, request, pk):
         competition = self._get(request, pk)
@@ -67,7 +79,8 @@ class CCCompetitionDetailView(APIView):
             )
         serializer = CompetitionUpdateSerializer(competition, data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        with transaction.atomic():
+            serializer.save()
         return Response(CompetitionSerializer(competition).data)
 
 
