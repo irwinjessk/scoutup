@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ChevronDown, Users } from 'lucide-react'
 
 import { fetchCgEvaluations } from '@/api/evaluations'
 import { ApiError } from '@/api/client'
@@ -30,6 +31,9 @@ function formatDate(value) {
 }
 
 function EvaluationRow({ row }) {
+  const [open, setOpen] = useState(false)
+  const participants = row.participants || []
+
   return (
     <li className="rounded-2xl border border-[var(--chef-border)] bg-white px-4 py-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -45,13 +49,38 @@ function EvaluationRow({ row }) {
         </Badge>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm text-[var(--chef-muted)]">
-        <span>
-          {row.nb_participants} / {row.nb_actifs} participant{row.nb_actifs > 1 ? 's' : ''}
-        </span>
+      <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-[var(--chef-muted)]">
+        {participants.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="inline-flex items-center gap-1 font-medium text-[var(--chef-primary)] hover:underline"
+          >
+            <Users className="size-3.5" />
+            {row.nb_participants} / {row.nb_actifs} participant{row.nb_actifs > 1 ? 's' : ''}
+            <ChevronDown className={cn('size-3.5 transition-transform', open && 'rotate-180')} />
+          </button>
+        ) : (
+          <span>
+            {row.nb_participants} / {row.nb_actifs} participant{row.nb_actifs > 1 ? 's' : ''}
+          </span>
+        )}
         {row.published_at ? <span>Publiée le {formatDate(row.published_at)}</span> : null}
         {row.closes_at ? <span>Clôture le {formatDate(row.closes_at)}</span> : null}
       </div>
+
+      {open && participants.length > 0 ? (
+        <ul className="mt-3 flex flex-wrap gap-2 border-t border-[var(--chef-border)] pt-3">
+          {participants.map((p) => (
+            <li
+              key={p.jeune_id}
+              className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-[var(--chef-ink)]"
+            >
+              {p.nom_complet}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </li>
   )
 }
