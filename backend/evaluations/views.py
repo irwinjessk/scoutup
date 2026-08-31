@@ -392,6 +392,7 @@ class CGEvaluationsView(APIView):
         evaluations = (
             Evaluation.objects.filter(communaute__groupe_id=request.user.groupe_id)
             .select_related('communaute', 'created_by')
+            .prefetch_related('attempts__jeune')
             .order_by('-created_at')
         )
 
@@ -406,12 +407,18 @@ class CGEvaluationsView(APIView):
                     communaute_id=communaute_id,
                 ).count()
 
+            participants = [
+                {'jeune_id': attempt.jeune_id, 'nom_complet': attempt.jeune.nom_complet}
+                for attempt in evaluation.attempts.all()
+            ]
+
             rows.append(
                 {
                     'id': evaluation.id,
                     'titre': evaluation.titre,
                     'statut': evaluation.statut,
                     'communaute': evaluation.communaute.nom,
+                    'participants': participants,
                     'cc_nom_complet': (
                         evaluation.created_by.nom_complet if evaluation.created_by else None
                     ),
