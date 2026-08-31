@@ -24,6 +24,10 @@ export function publishCcCompetition(id) {
   return apiFetch(`cc/competitions/${id}/publish/`, { method: 'POST' })
 }
 
+export function fetchCcCompetitionClassement(id) {
+  return apiFetch(`cc/competitions/${id}/classement/`)
+}
+
 /** ── Jeune ──────────────────────────────────────────── */
 
 export function fetchJeuneCompetitions() {
@@ -43,4 +47,14 @@ export function answerCompetitionQuestion(id, { questionId, reponse }) {
     method: 'POST',
     body: JSON.stringify({ question_id: questionId, reponse }),
   })
+}
+
+export function fetchJeuneCompetitionClassement(id) {
+  return apiFetch(`jeune/competitions/${id}/classement/`)
+}
+
+/** ── CG ─────────────────────────────────────────────── */
+
+export function fetchCgCompetitions() {
+  return apiFetch('cg/competitions/')
 }

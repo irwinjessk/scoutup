@@ -5,7 +5,7 @@ from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.permissions import IsActif, IsCC, IsJeune
+from accounts.permissions import IsActif, IsCC, IsCG, IsJeune
 from gamification.services import get_or_create_scarf, serialize_scarf, sync_recoveries
 
 from .models import Competition, CompetitionAttempt, CompetitionStatut
@@ -15,7 +15,14 @@ from .serializers import (
     CompetitionSerializer,
     CompetitionUpdateSerializer,
 )
-from .services import CompetitionError, answer_competition_question, join_competition, next_question, sync_closure
+from .services import (
+    CompetitionError,
+    answer_competition_question,
+    build_classement,
+    join_competition,
+    next_question,
+    sync_closure,
+)
 
 # ── CC ──────────────────────────────────────────────────────────────
 
@@ -87,6 +94,24 @@ class CCCompetitionPublishView(APIView):
         competition.closes_at = now + timedelta(days=competition.duree_jours)
         competition.save(update_fields=['statut', 'published_at', 'closes_at'])
         return Response(CompetitionSerializer(competition).data)
+
+
+class CCCompetitionClassementView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsActif, IsCC]
+
+    def get(self, request, pk):
+        competition = Competition.objects.filter(
+            pk=pk, communaute_id=request.user.communaute_id
+        ).first()
+        if not competition:
+            return Response({'detail': 'Compétition introuvable.'}, status=status.HTTP_404_NOT_FOUND)
+        sync_closure(competition)
+        return Response(
+            {
+                'competition': CompetitionSerializer(competition).data,
+                'classement': build_classement(competition),
+            }
+        )
 
 
 # ── Jeune ───────────────────────────────────────────────────────────
@@ -194,3 +219,68 @@ class JeuneCompetitionAnswerView(APIView):
 
         result['foulard'] = serialize_scarf(sync_recoveries(get_or_create_scarf(request.user)))
         return Response(result)
+
+
+class JeuneCompetitionClassementView(APIView):
+    """Classement de la compétition, sans notion d'amis dédiée : tous les jeunes
+    de la communauté (périmètre mono-communauté de la Phase 1), avec sa propre
+    ligne signalée (RF-46)."""
+
+    permission_classes = [permissions.IsAuthenticated, IsActif, IsJeune]
+
+    def get(self, request, pk):
+        competition = Competition.objects.filter(
+            pk=pk, communaute_id=request.user.communaute_id
+        ).first()
+        if not competition:
+            return Response({'detail': 'Compétition introuvable.'}, status=status.HTTP_404_NOT_FOUND)
+        sync_closure(competition)
+        return Response(build_classement(competition, moi_id=request.user.id))
+
+
+# ── CG ──────────────────────────────────────────────────────────────
+
+
+class CGCompetitionsView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsActif, IsCG]
+
+    def get(self, request):
+        from accounts.models import Role, StatutCompte, User
+
+        competitions = (
+            Competition.objects.filter(communaute__groupe_id=request.user.groupe_id)
+            .select_related('communaute', 'created_by')
+            .prefetch_related('attempts__jeune')
+            .order_by('-created_at')
+        )
+
+        nb_actifs_par_communaute = {}
+        rows = []
+        for competition in competitions:
+            communaute_id = competition.communaute_id
+            if communaute_id not in nb_actifs_par_communaute:
+                nb_actifs_par_communaute[communaute_id] = User.objects.filter(
+                    role=Role.JEUNE,
+                    statut=StatutCompte.ACTIF,
+                    communaute_id=communaute_id,
+                ).count()
+
+            classement = build_classement(competition)
+
+            rows.append(
+                {
+                    'id': competition.id,
+                    'titre': competition.titre,
+                    'statut': competition.statut,
+                    'communaute': competition.communaute.nom,
+                    'cc_nom_complet': (
+                        competition.created_by.nom_complet if competition.created_by else None
+                    ),
+                    'nb_participants': len(classement),
+                    'nb_actifs': nb_actifs_par_communaute[communaute_id],
+                    'classement': classement,
+                    'published_at': competition.published_at,
+                    'closes_at': competition.closes_at,
+                }
+            )
+        return Response(rows)

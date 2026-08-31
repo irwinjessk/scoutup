@@ -1,10 +1,13 @@
 from django.urls import path
 
 from .views import (
+    CCCompetitionClassementView,
     CCCompetitionDetailView,
     CCCompetitionListCreateView,
     CCCompetitionPublishView,
+    CGCompetitionsView,
     JeuneCompetitionAnswerView,
+    JeuneCompetitionClassementView,
     JeuneCompetitionJoinView,
     JeuneCompetitionListView,
     JeuneCompetitionQuestionView,
@@ -25,6 +28,11 @@ urlpatterns = [
         CCCompetitionPublishView.as_view(),
         name='cc-competition-publish',
     ),
+    path(
+        'cc/competitions/<int:pk>/classement/',
+        CCCompetitionClassementView.as_view(),
+        name='cc-competition-classement',
+    ),
     # Jeune
     path('jeune/competitions/', JeuneCompetitionListView.as_view(), name='jeune-competitions'),
     path(
@@ -42,4 +50,11 @@ urlpatterns = [
         JeuneCompetitionAnswerView.as_view(),
         name='jeune-competition-answer',
     ),
+    path(
+        'jeune/competitions/<int:pk>/classement/',
+        JeuneCompetitionClassementView.as_view(),
+        name='jeune-competition-classement',
+    ),
+    # CG
+    path('cg/competitions/', CGCompetitionsView.as_view(), name='cg-competitions'),
 ]

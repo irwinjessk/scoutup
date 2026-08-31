@@ -26,6 +26,7 @@ import CgContenus from '@/pages/cg/Contenus'
 import CgDashboard from '@/pages/cg/Dashboard'
 import CgEvaluations from '@/pages/cg/Evaluations'
 import CgFormations from '@/pages/cg/Formations'
+import CgGenieRoute from '@/pages/cg/GenieRoute'
 import CgJeunes from '@/pages/cg/Jeunes'
 import CgJournal from '@/pages/cg/Journal'
 import JeuneBrevets from '@/pages/jeune/Brevets'
@@ -82,6 +83,7 @@ function AppRoutes() {
             <Route path="formations" element={<CgFormations />} />
             <Route path="jeunes" element={<CgJeunes />} />
             <Route path="evaluations" element={<CgEvaluations />} />
+            <Route path="genie-route" element={<CgGenieRoute />} />
             <Route path="contenus" element={<CgContenus />} />
             <Route path="journal" element={<CgJournal />} />
           </Route>

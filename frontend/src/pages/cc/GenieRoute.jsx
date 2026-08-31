@@ -3,6 +3,7 @@ import { Plus, X } from 'lucide-react'
 
 import {
   createCcCompetition,
+  fetchCcCompetitionClassement,
   fetchCcCompetitions,
   publishCcCompetition,
 } from '@/api/competitions'
@@ -11,6 +12,18 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
+
+const CLASSEMENT_REFRESH_MS = 15_000
+
+function formatDate(value) {
+  if (!value) return null
+  return new Date(value).toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
 const TYPES = [
   { id: 'QCM', label: 'QCM' },
@@ -114,6 +127,10 @@ export default function CcGenieRoute() {
   const [dureeJours, setDureeJours] = useState(2)
   const [questions, setQuestions] = useState([emptyQuestion()])
 
+  const [classementFor, setClassementFor] = useState(null)
+  const [classement, setClassement] = useState(null)
+  const [classementLoading, setClassementLoading] = useState(false)
+
   async function loadCompetitions() {
     setError('')
     setLoading(true)
@@ -174,6 +191,36 @@ export default function CcGenieRoute() {
       setBusy(false)
     }
   }
+
+  async function loadClassement(id) {
+    try {
+      const data = await fetchCcCompetitionClassement(id)
+      setClassement(data)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Classement indisponible.')
+    }
+  }
+
+  async function onToggleClassement(id) {
+    if (classementFor === id) {
+      setClassementFor(null)
+      setClassement(null)
+      return
+    }
+    setClassementFor(id)
+    setClassement(null)
+    setClassementLoading(true)
+    setError('')
+    await loadClassement(id)
+    setClassementLoading(false)
+  }
+
+  useEffect(() => {
+    if (!classementFor) return undefined
+    const id = window.setInterval(() => loadClassement(classementFor), CLASSEMENT_REFRESH_MS)
+    return () => window.clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classementFor])
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -415,8 +462,56 @@ export default function CcGenieRoute() {
                       Publier
                     </Button>
                   ) : null}
+                  {comp.statut !== 'BROUILLON' ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onToggleClassement(comp.id)}
+                      className="border-[var(--chef-border)]"
+                    >
+                      {classementFor === comp.id ? 'Masquer' : 'Classement'}
+                    </Button>
+                  ) : null}
                 </div>
               </div>
+
+              {classementFor === comp.id ? (
+                <div className="mt-4 border-t border-[var(--chef-border)] pt-4">
+                  {classementLoading ? (
+                    <p className="text-sm text-[var(--chef-muted)]">Chargement…</p>
+                  ) : classement ? (
+                    classement.classement.length === 0 ? (
+                      <p className="text-sm text-[var(--chef-muted)]">
+                        Aucun participant pour le moment.
+                      </p>
+                    ) : (
+                      <ol className="space-y-1.5">
+                        {classement.classement.map((row) => (
+                          <li
+                            key={row.jeune_id}
+                            className="flex items-center justify-between rounded-lg bg-[#fafafa] px-3 py-2 text-sm"
+                          >
+                            <span className="flex items-center gap-2 text-[var(--chef-ink)]">
+                              <span className="w-5 shrink-0 font-semibold text-[var(--chef-muted)]">
+                                {row.rang}
+                              </span>
+                              {row.nom_complet}
+                            </span>
+                            <span className="flex items-center gap-3 text-[var(--chef-muted)]">
+                              <span className="font-medium text-[var(--chef-ink)]">
+                                {row.score} pt{row.score > 1 ? 's' : ''}
+                              </span>
+                              {row.derniere_reponse ? (
+                                <span className="text-xs">{formatDate(row.derniere_reponse)}</span>
+                              ) : null}
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                    )
+                  ) : null}
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>

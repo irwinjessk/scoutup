@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
-import { Award, Check, Swords, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Award, Check, Swords, Trophy, X } from 'lucide-react'
 
 import {
   answerCompetitionQuestion,
+  fetchJeuneCompetitionClassement,
   fetchJeuneCompetitions,
   fetchNextCompetitionQuestion,
   joinCompetition,
@@ -47,6 +48,10 @@ export default function JeuneGenieRoute() {
   const [blankAnswers, setBlankAnswers] = useState([])
   const [selectedOption, setSelectedOption] = useState(null)
 
+  const [tab, setTab] = useState('jouer')
+  const [classement, setClassement] = useState(null)
+  const [classementLoading, setClassementLoading] = useState(false)
+
   async function loadList() {
     setError('')
     setLoading(true)
@@ -90,6 +95,7 @@ export default function JeuneGenieRoute() {
     try {
       await joinCompetition(competition.id)
       setActive(competition)
+      setTab('jouer')
       await loadQuestion(competition)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Impossible de rejoindre.')
@@ -103,7 +109,25 @@ export default function JeuneGenieRoute() {
     setQuestion(null)
     setFeedback(null)
     setTermine(false)
+    setClassement(null)
     loadList()
+  }
+
+  async function loadClassement(competition) {
+    setClassementLoading(true)
+    try {
+      const data = await fetchJeuneCompetitionClassement(competition.id)
+      setClassement(Array.isArray(data) ? data : [])
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Classement indisponible.')
+    } finally {
+      setClassementLoading(false)
+    }
+  }
+
+  function onSelectTab(next) {
+    setTab(next)
+    if (next === 'classement' && active) loadClassement(active)
   }
 
   async function submit(reponse) {
@@ -158,7 +182,69 @@ export default function JeuneGenieRoute() {
           </p>
         ) : null}
 
-        {termine ? (
+        <div className="flex gap-1 rounded-xl border border-white/10 bg-white/[0.04] p-1">
+          {[
+            { id: 'jouer', label: 'Jouer' },
+            { id: 'classement', label: 'Classement' },
+          ].map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => onSelectTab(t.id)}
+              className={cn(
+                'flex-1 rounded-lg py-1.5 text-sm font-medium transition',
+                tab === t.id ? 'bg-[#0073e6] text-white' : 'text-white/55 hover:text-white/80',
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'classement' ? (
+          <div className="space-y-1.5">
+            {classementLoading ? (
+              <p className="text-sm text-white/45">Chargement…</p>
+            ) : !classement || classement.length === 0 ? (
+              <p className="text-sm text-white/45">Aucun participant pour le moment.</p>
+            ) : (
+              <ol className="space-y-1.5">
+                {classement.map((row) => (
+                  <li
+                    key={row.jeune_id}
+                    className={cn(
+                      'flex items-center justify-between rounded-xl border px-3 py-2.5 text-sm',
+                      row.moi
+                        ? 'border-[#0073e6]/40 bg-[#0073e6]/10'
+                        : 'border-white/10 bg-white/[0.04]',
+                    )}
+                  >
+                    <span className="flex items-center gap-2 text-white/85">
+                      <span className="w-5 shrink-0 font-semibold text-white/40">{row.rang}</span>
+                      {row.rang <= 3 ? (
+                        <Trophy
+                          className={cn(
+                            'size-3.5 shrink-0',
+                            row.rang === 1
+                              ? 'text-[#e8b923]'
+                              : row.rang === 2
+                                ? 'text-white/60'
+                                : 'text-[#b08d57]',
+                          )}
+                        />
+                      ) : null}
+                      {row.nom_complet}
+                      {row.moi ? <span className="text-xs text-[#7eb6ff]">(toi)</span> : null}
+                    </span>
+                    <span className="font-medium text-white">
+                      {row.score} pt{row.score > 1 ? 's' : ''}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+        ) : termine ? (
           <div className="space-y-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-5">
             <div className="flex items-center gap-2 text-emerald-300">
               <Award className="size-5" />
