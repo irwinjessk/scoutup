@@ -6,6 +6,10 @@ export function fetchCcEvaluations() {
   return apiFetch('cc/evaluations/')
 }
 
+export function fetchCcEvaluationDetail(id) {
+  return apiFetch(`cc/evaluations/${id}/`)
+}
+
 export function createCcEvaluation(payload) {
   return apiFetch('cc/evaluations/', {
     method: 'POST',

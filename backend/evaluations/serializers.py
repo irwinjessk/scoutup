@@ -44,6 +44,20 @@ class EvaluationSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'statut', 'published_at', 'closes_at', 'created_at')
 
 
+def _replace_questions(evaluation, questions_data):
+    evaluation.questions.all().delete()
+    for idx, question in enumerate(questions_data, start=1):
+        if not question.get('ordre'):
+            question['ordre'] = idx
+        EvaluationQuestion.objects.create(evaluation=evaluation, **question)
+
+
+def _validate_non_empty_questions(value):
+    if not value:
+        raise serializers.ValidationError('Ajoute au moins une question.')
+    return value
+
+
 class EvaluationCreateSerializer(serializers.ModelSerializer):
     questions = EvaluationQuestionInputSerializer(many=True)
 
@@ -52,9 +66,7 @@ class EvaluationCreateSerializer(serializers.ModelSerializer):
         fields = ('titre', 'duree_minutes', 'questions')
 
     def validate_questions(self, value):
-        if not value:
-            raise serializers.ValidationError('Ajoute au moins une question.')
-        return value
+        return _validate_non_empty_questions(value)
 
     def create(self, validated_data):
         questions_data = validated_data.pop('questions')
@@ -64,17 +76,39 @@ class EvaluationCreateSerializer(serializers.ModelSerializer):
             created_by=request.user,
             **validated_data,
         )
-        for idx, question in enumerate(questions_data, start=1):
-            if not question.get('ordre'):
-                question['ordre'] = idx
-            EvaluationQuestion.objects.create(evaluation=evaluation, **question)
+        _replace_questions(evaluation, questions_data)
         return evaluation
 
 
-class EvaluationUpdateSerializer(serializers.ModelSerializer):
+class EvaluationDetailSerializer(serializers.ModelSerializer):
+    """Détail complet d'un brouillon — questions avec reponse_attendue, pour réouverture."""
+
+    questions = EvaluationQuestionSerializer(many=True, read_only=True)
+
     class Meta:
         model = Evaluation
-        fields = ('titre', 'duree_minutes')
+        fields = ('id', 'titre', 'duree_minutes', 'statut', 'questions')
+
+
+class EvaluationUpdateSerializer(serializers.ModelSerializer):
+    """Réenregistrement complet d'un brouillon (titre, durée et banque de questions)."""
+
+    questions = EvaluationQuestionInputSerializer(many=True)
+
+    class Meta:
+        model = Evaluation
+        fields = ('titre', 'duree_minutes', 'questions')
+
+    def validate_questions(self, value):
+        return _validate_non_empty_questions(value)
+
+    def update(self, instance, validated_data):
+        questions_data = validated_data.pop('questions')
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        _replace_questions(instance, questions_data)
+        return instance
 
 
 class EvaluationAttemptResultSerializer(serializers.ModelSerializer):
