@@ -69,7 +69,7 @@ export default function FoulardIndicator({ className }) {
         const droitePerdue = perduesPourCeFoulard >= 2
 
         return (
-          <div key={i} className="relative h-11" style={{ aspectRatio: RATIO_FOULARD }} aria-hidden>
+          <div key={i} className="relative h-8" style={{ aspectRatio: RATIO_FOULARD }} aria-hidden>
             <div
               className="absolute inset-y-0 left-0 w-1/2 transition-opacity duration-700 ease-out"
               style={{
