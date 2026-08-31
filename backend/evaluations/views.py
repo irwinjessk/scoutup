@@ -9,6 +9,7 @@ from accounts.permissions import IsActif, IsCC, IsCG, IsJeune
 
 from .models import Evaluation, EvaluationAttempt, EvaluationStatut
 from .serializers import (
+    EvaluationAnswerDetailSerializer,
     EvaluationAttemptResultSerializer,
     EvaluationCreateSerializer,
     EvaluationQuestionPublicSerializer,
@@ -148,6 +149,41 @@ class CCEvaluationResultsView(APIView):
             {
                 'evaluation': EvaluationSerializer(evaluation).data,
                 'participants': rows,
+            }
+        )
+
+
+class CCEvaluationParticipantDetailView(APIView):
+    """Détail question par question des réponses d'un participant, pour le CC."""
+
+    permission_classes = [permissions.IsAuthenticated, IsActif, IsCC]
+
+    def get(self, request, pk, jeune_id):
+        evaluation = Evaluation.objects.filter(
+            pk=pk, communaute_id=request.user.communaute_id
+        ).first()
+        if not evaluation:
+            return Response({'detail': 'Évaluation introuvable.'}, status=status.HTTP_404_NOT_FOUND)
+
+        attempt = (
+            evaluation.attempts.filter(jeune_id=jeune_id).select_related('jeune').first()
+        )
+        if not attempt:
+            return Response(
+                {'detail': "Ce jeune n'a pas participé à cette évaluation."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        reponses = attempt.reponses.select_related('question').order_by(
+            'question__ordre', 'question__id'
+        )
+        return Response(
+            {
+                'jeune_id': attempt.jeune_id,
+                'nom_complet': attempt.jeune.nom_complet,
+                'score': attempt.score,
+                'score_max': attempt.score_max,
+                'reponses': EvaluationAnswerDetailSerializer(reponses, many=True).data,
             }
         )
 
@@ -301,6 +337,47 @@ class JeuneEvaluationSubmitView(APIView):
 
         grade_attempt(attempt, reponses)
         return Response({'score': attempt.score, 'score_max': attempt.score_max})
+
+
+class JeuneEvaluationAttemptDetailView(APIView):
+    """Correctif question par question d'une tentative passée, réservé au jeune concerné.
+
+    Les bonnes réponses ne sont révélées qu'une fois l'évaluation clôturée, pour ne pas
+    avantager un jeune qui aurait fini avant les autres.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsActif, IsJeune]
+
+    def get(self, request, attempt_id):
+        attempt = (
+            EvaluationAttempt.objects.filter(pk=attempt_id, jeune=request.user)
+            .select_related('evaluation')
+            .first()
+        )
+        if not attempt:
+            return Response({'detail': 'Tentative introuvable.'}, status=status.HTTP_404_NOT_FOUND)
+
+        sync_closure(attempt.evaluation)
+        corrige = attempt.evaluation.statut == EvaluationStatut.CLOTUREE
+
+        reponses = attempt.reponses.select_related('question').order_by(
+            'question__ordre', 'question__id'
+        )
+        data = EvaluationAnswerDetailSerializer(reponses, many=True).data
+        if not corrige:
+            for row in data:
+                row['reponse_attendue'] = None
+                row['est_correcte'] = None
+
+        return Response(
+            {
+                'evaluation_titre': attempt.evaluation.titre,
+                'score': attempt.score,
+                'score_max': attempt.score_max,
+                'corrige': corrige,
+                'reponses': data,
+            }
+        )
 
 
 # ── CG ──────────────────────────────────────────────────────────────

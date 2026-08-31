@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Plus, X, XCircle } from 'lucide-react'
 
 import {
   closeCcEvaluation,
   createCcEvaluation,
+  fetchCcEvaluationParticipantDetail,
   fetchCcEvaluationResults,
   fetchCcEvaluations,
   publishCcEvaluation,
@@ -12,6 +13,13 @@ import { ApiError } from '@/api/client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 
 const TYPES = [
@@ -105,6 +113,19 @@ function buildQuestionPayload(q, ordre) {
   return payload
 }
 
+function formatAnswerValue(type, value) {
+  if (value == null || value === '') return '—'
+  if (type === 'QCM') {
+    if (value && typeof value === 'object') return value.texte ?? String(value.id ?? '—')
+    return String(value)
+  }
+  if (Array.isArray(value)) {
+    if (Array.isArray(value[0])) return value[0].join(' · ')
+    return value.join(' · ') || '—'
+  }
+  return String(value)
+}
+
 export default function CcEvaluations() {
   const [evaluations, setEvaluations] = useState([])
   const [loading, setLoading] = useState(true)
@@ -119,6 +140,11 @@ export default function CcEvaluations() {
   const [resultsFor, setResultsFor] = useState(null)
   const [results, setResults] = useState(null)
   const [resultsLoading, setResultsLoading] = useState(false)
+
+  const [detailFor, setDetailFor] = useState(null)
+  const [detail, setDetail] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState('')
 
   async function loadEvaluations() {
     setError('')
@@ -207,6 +233,27 @@ export default function CcEvaluations() {
     } finally {
       setResultsLoading(false)
     }
+  }
+
+  async function onShowDetail(evaluationId, jeuneId) {
+    setDetailFor({ evaluationId, jeuneId })
+    setDetail(null)
+    setDetailError('')
+    setDetailLoading(true)
+    try {
+      const data = await fetchCcEvaluationParticipantDetail(evaluationId, jeuneId)
+      setDetail(data)
+    } catch (err) {
+      setDetailError(err instanceof ApiError ? err.message : 'Détail indisponible.')
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  function closeDetail() {
+    setDetailFor(null)
+    setDetail(null)
+    setDetailError('')
   }
 
   return (
@@ -482,7 +529,8 @@ export default function CcEvaluations() {
                             <th className="pb-2 pr-3 font-medium">Participant</th>
                             <th className="pb-2 pr-3 font-medium">Note</th>
                             <th className="pb-2 pr-3 font-medium">Temps</th>
-                            <th className="pb-2 font-medium">Présence</th>
+                            <th className="pb-2 pr-3 font-medium">Présence</th>
+                            <th className="pb-2 font-medium" />
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--chef-border)]">
@@ -497,7 +545,7 @@ export default function CcEvaluations() {
                               <td className="py-2 pr-3 text-[var(--chef-muted)]">
                                 {p.temps_minutes != null ? `${p.temps_minutes} min` : '—'}
                               </td>
-                              <td className="py-2">
+                              <td className="py-2 pr-3">
                                 <Badge
                                   variant="secondary"
                                   className={cn(
@@ -509,6 +557,18 @@ export default function CcEvaluations() {
                                 >
                                   {p.present ? 'Présent' : 'Absent'}
                                 </Badge>
+                              </td>
+                              <td className="py-2 text-right">
+                                {p.present ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => onShowDetail(ev.id, p.jeune_id)}
+                                    className="inline-flex items-center gap-0.5 text-sm font-medium text-[var(--chef-primary)] hover:underline"
+                                  >
+                                    Détail
+                                    <ChevronRight className="size-3.5" />
+                                  </button>
+                                ) : null}
                               </td>
                             </tr>
                           ))}
@@ -522,6 +582,81 @@ export default function CcEvaluations() {
           ))}
         </ul>
       )}
+
+      <Sheet open={Boolean(detailFor)} onOpenChange={(open) => !open && closeDetail()}>
+        <SheetContent
+          side="right"
+          className="flex w-full flex-col gap-0 border-[var(--chef-border)] bg-white p-0 sm:max-w-md"
+          showCloseButton
+        >
+          <SheetHeader className="shrink-0 border-b border-[var(--chef-border)] px-5 py-4 text-left">
+            <SheetTitle className="text-base text-[var(--chef-ink)]">
+              {detail?.nom_complet || 'Détail de la participation'}
+            </SheetTitle>
+            <SheetDescription>
+              {evaluations.find((e) => e.id === detailFor?.evaluationId)?.titre}
+              {detail ? ` · ${detail.score} / ${detail.score_max} pts` : ''}
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
+            {detailError ? (
+              <p className="rounded-xl border border-[#ff3131]/30 bg-[#ff3131]/5 px-4 py-3 text-sm text-[#ff3131]">
+                {detailError}
+              </p>
+            ) : null}
+
+            {detailLoading ? (
+              <p className="text-sm text-[var(--chef-muted)]">Chargement…</p>
+            ) : null}
+
+            {!detailLoading && detail
+              ? detail.reponses.map((r, idx) => (
+                  <div
+                    key={r.question_id}
+                    className={cn(
+                      'rounded-xl border px-4 py-3',
+                      r.est_correcte
+                        ? 'border-emerald-200 bg-emerald-50/60'
+                        : 'border-[#ff3131]/25 bg-[#ff3131]/5',
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-[var(--chef-muted)]">
+                        Question {idx + 1}
+                      </p>
+                      {r.est_correcte ? (
+                        <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
+                      ) : (
+                        <XCircle className="size-4 shrink-0 text-[#ff3131]" />
+                      )}
+                    </div>
+                    <p className="mt-1 text-sm font-medium text-[var(--chef-ink)]">{r.enonce}</p>
+                    <div className="mt-2 space-y-1 text-sm">
+                      <p>
+                        <span className="text-[var(--chef-muted)]">Réponse donnée : </span>
+                        <span className="font-medium text-[var(--chef-ink)]">
+                          {formatAnswerValue(r.type, r.reponse)}
+                        </span>
+                      </p>
+                      {!r.est_correcte ? (
+                        <p>
+                          <span className="text-[var(--chef-muted)]">Réponse attendue : </span>
+                          <span className="font-medium text-emerald-700">
+                            {formatAnswerValue(r.type, r.reponse_attendue)}
+                          </span>
+                        </p>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 text-xs text-[var(--chef-muted)]">
+                      {r.points_obtenus} / {r.points_max} pt{r.points_max > 1 ? 's' : ''}
+                    </p>
+                  </div>
+                ))
+              : null}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
