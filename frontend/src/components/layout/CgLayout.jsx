@@ -4,6 +4,7 @@ import {
   ClipboardCheck,
   LayoutDashboard,
   ScrollText,
+  Swords,
   UserCog,
   Users,
 } from 'lucide-react'
@@ -16,6 +17,7 @@ const ITEMS = [
   { to: '/cg/jeunes', label: 'Jeunes', icon: Users },
   { to: '/cg/formations', label: 'Formations', icon: BookOpen },
   { to: '/cg/evaluations', label: 'Évaluations', icon: ClipboardCheck },
+  { to: '/cg/genie-route', label: 'Génie Route', icon: Swords },
   { to: '/cg/contenus', label: 'Contenus', icon: BookMarked },
   { to: '/cg/journal', label: 'Journal', icon: ScrollText },
 ]

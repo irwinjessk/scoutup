@@ -108,3 +108,21 @@ def answer_competition_question(jeune, competition: Competition, question_id, re
         'points_obtenus': points,
         'score': attempt.score,
     }
+
+
+def build_classement(competition: Competition, *, moi_id=None) -> list[dict]:
+    """Classement d'une compétition, meilleur score en tête (RF-43, RF-46, RF-49)."""
+    attempts = competition.attempts.select_related('jeune').order_by('-score', 'updated_at')
+    rows = []
+    for rang, attempt in enumerate(attempts, start=1):
+        row = {
+            'rang': rang,
+            'jeune_id': attempt.jeune_id,
+            'nom_complet': attempt.jeune.nom_complet,
+            'score': attempt.score,
+            'derniere_reponse': attempt.updated_at,
+        }
+        if moi_id is not None:
+            row['moi'] = attempt.jeune_id == moi_id
+        rows.append(row)
+    return rows
