@@ -24,6 +24,10 @@ export function publishCcCompetition(id) {
   return apiFetch(`cc/competitions/${id}/publish/`, { method: 'POST' })
 }
 
+export function closeCcCompetition(id) {
+  return apiFetch(`cc/competitions/${id}/close/`, { method: 'POST' })
+}
+
 export function fetchCcCompetitionClassement(id) {
   return apiFetch(`cc/competitions/${id}/classement/`)
 }

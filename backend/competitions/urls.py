@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     CCCompetitionClassementView,
+    CCCompetitionCloseView,
     CCCompetitionDetailView,
     CCCompetitionListCreateView,
     CCCompetitionPublishView,
@@ -27,6 +28,11 @@ urlpatterns = [
         'cc/competitions/<int:pk>/publish/',
         CCCompetitionPublishView.as_view(),
         name='cc-competition-publish',
+    ),
+    path(
+        'cc/competitions/<int:pk>/close/',
+        CCCompetitionCloseView.as_view(),
+        name='cc-competition-close',
     ),
     path(
         'cc/competitions/<int:pk>/classement/',
