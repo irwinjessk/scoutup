@@ -10,6 +10,7 @@ from gamification.services import get_or_create_scarf, serialize_scarf, sync_rec
 
 from .models import Competition, CompetitionAttempt, CompetitionStatut
 from .serializers import (
+    MIN_QUESTIONS,
     CompetitionCreateSerializer,
     CompetitionQuestionPublicSerializer,
     CompetitionSerializer,
@@ -19,6 +20,7 @@ from .services import (
     CompetitionError,
     answer_competition_question,
     build_classement,
+    close_competition,
     join_competition,
     next_question,
     sync_closure,
@@ -83,9 +85,9 @@ class CCCompetitionPublishView(APIView):
                 {'detail': 'Cette compétition est déjà publiée ou clôturée.'},
                 status=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
-        if not competition.questions.exists():
+        if competition.questions.count() < MIN_QUESTIONS:
             return Response(
-                {'detail': 'Ajoute au moins une question avant de publier.'},
+                {'detail': f'Il faut au moins {MIN_QUESTIONS} questions pour publier.'},
                 status=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
         now = timezone.now()
@@ -93,6 +95,26 @@ class CCCompetitionPublishView(APIView):
         competition.published_at = now
         competition.closes_at = now + timedelta(days=competition.duree_jours)
         competition.save(update_fields=['statut', 'published_at', 'closes_at'])
+        return Response(CompetitionSerializer(competition).data)
+
+
+class CCCompetitionCloseView(APIView):
+    """Clôture manuelle anticipée — un CC doit pouvoir désactiver une compétition en cours."""
+
+    permission_classes = [permissions.IsAuthenticated, IsActif, IsCC]
+
+    def post(self, request, pk):
+        competition = Competition.objects.filter(
+            pk=pk, communaute_id=request.user.communaute_id
+        ).first()
+        if not competition:
+            return Response({'detail': 'Compétition introuvable.'}, status=status.HTTP_404_NOT_FOUND)
+        if competition.statut != CompetitionStatut.OUVERTE:
+            return Response(
+                {'detail': 'Seule une compétition ouverte peut être clôturée.'},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        close_competition(competition)
         return Response(CompetitionSerializer(competition).data)
 
 

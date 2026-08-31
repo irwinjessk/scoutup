@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Plus, X } from 'lucide-react'
 
 import {
+  closeCcCompetition,
   createCcCompetition,
   fetchCcCompetitionClassement,
   fetchCcCompetitions,
@@ -14,6 +15,7 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
 const CLASSEMENT_REFRESH_MS = 15_000
+const MIN_QUESTIONS = 60
 
 function formatDate(value) {
   if (!value) return null
@@ -161,6 +163,12 @@ export default function CcGenieRoute() {
 
   async function onCreate(e) {
     e.preventDefault()
+    if (questions.length < MIN_QUESTIONS) {
+      setError(
+        `Le cahier des charges exige une banque d’au moins ${MIN_QUESTIONS} questions (${questions.length} pour le moment).`,
+      )
+      return
+    }
     setBusy(true)
     setError('')
     try {
@@ -187,6 +195,19 @@ export default function CcGenieRoute() {
       await loadCompetitions()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Publication impossible.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onClose(id) {
+    setBusy(true)
+    setError('')
+    try {
+      await closeCcCompetition(id)
+      await loadCompetitions()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Clôture impossible.')
     } finally {
       setBusy(false)
     }
@@ -405,8 +426,13 @@ export default function CcGenieRoute() {
           >
             + Ajouter une question
           </button>
-          <p className="text-xs text-[var(--chef-muted)]">
-            Le cahier des charges recommande une banque d'une soixantaine de questions.
+          <p
+            className={cn(
+              'text-xs',
+              questions.length < MIN_QUESTIONS ? 'text-[#ff3131]' : 'text-emerald-600',
+            )}
+          >
+            {questions.length} / {MIN_QUESTIONS} questions minimum requises pour publier.
           </p>
 
           <div className="flex gap-2 pt-1">
@@ -460,6 +486,17 @@ export default function CcGenieRoute() {
                       className="bg-[var(--chef-primary)] text-white hover:bg-[var(--chef-primary)]/90"
                     >
                       Publier
+                    </Button>
+                  ) : null}
+                  {comp.statut === 'OUVERTE' ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => onClose(comp.id)}
+                      className="border-[var(--chef-accent)]/40 text-[var(--chef-accent)]"
+                    >
+                      Clôturer
                     </Button>
                   ) : null}
                   {comp.statut !== 'BROUILLON' ? (

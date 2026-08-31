@@ -4,6 +4,8 @@ from formation.models import QuestionType
 
 from .models import Competition, CompetitionQuestion
 
+MIN_QUESTIONS = 60
+
 
 class CompetitionQuestionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -76,8 +78,11 @@ class CompetitionCreateSerializer(serializers.ModelSerializer):
         fields = ('titre', 'duree_jours', 'questions')
 
     def validate_questions(self, value):
-        if not value:
-            raise serializers.ValidationError('Ajoute au moins une question.')
+        if len(value) < MIN_QUESTIONS:
+            raise serializers.ValidationError(
+                f'Le cahier des charges exige une banque d’au moins {MIN_QUESTIONS} questions '
+                f'({len(value)} fournie{"s" if len(value) > 1 else ""}).'
+            )
         return value
 
     def create(self, validated_data):
