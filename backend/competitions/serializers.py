@@ -70,6 +70,23 @@ class CompetitionSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'statut', 'published_at', 'closes_at', 'created_at')
 
 
+def _replace_questions(competition, questions_data):
+    competition.questions.all().delete()
+    for idx, question in enumerate(questions_data, start=1):
+        if not question.get('ordre'):
+            question['ordre'] = idx
+        CompetitionQuestion.objects.create(competition=competition, **question)
+
+
+def _validate_min_questions(value):
+    if len(value) < MIN_QUESTIONS:
+        raise serializers.ValidationError(
+            f'Le cahier des charges exige une banque d’au moins {MIN_QUESTIONS} questions '
+            f'({len(value)} fournie{"s" if len(value) > 1 else ""}).'
+        )
+    return value
+
+
 class CompetitionCreateSerializer(serializers.ModelSerializer):
     questions = CompetitionQuestionInputSerializer(many=True)
 
@@ -78,12 +95,7 @@ class CompetitionCreateSerializer(serializers.ModelSerializer):
         fields = ('titre', 'duree_jours', 'questions')
 
     def validate_questions(self, value):
-        if len(value) < MIN_QUESTIONS:
-            raise serializers.ValidationError(
-                f'Le cahier des charges exige une banque d’au moins {MIN_QUESTIONS} questions '
-                f'({len(value)} fournie{"s" if len(value) > 1 else ""}).'
-            )
-        return value
+        return _validate_min_questions(value)
 
     def create(self, validated_data):
         questions_data = validated_data.pop('questions')
@@ -93,14 +105,36 @@ class CompetitionCreateSerializer(serializers.ModelSerializer):
             created_by=request.user,
             **validated_data,
         )
-        for idx, question in enumerate(questions_data, start=1):
-            if not question.get('ordre'):
-                question['ordre'] = idx
-            CompetitionQuestion.objects.create(competition=competition, **question)
+        _replace_questions(competition, questions_data)
         return competition
 
 
-class CompetitionUpdateSerializer(serializers.ModelSerializer):
+class CompetitionDetailSerializer(serializers.ModelSerializer):
+    """Détail complet d'un brouillon — questions avec reponse_attendue, pour réouverture (RF-42)."""
+
+    questions = CompetitionQuestionSerializer(many=True, read_only=True)
+
     class Meta:
         model = Competition
-        fields = ('titre', 'duree_jours')
+        fields = ('id', 'titre', 'duree_jours', 'statut', 'questions')
+
+
+class CompetitionUpdateSerializer(serializers.ModelSerializer):
+    """Réenregistrement complet d'un brouillon (titre, durée et banque de questions)."""
+
+    questions = CompetitionQuestionInputSerializer(many=True)
+
+    class Meta:
+        model = Competition
+        fields = ('titre', 'duree_jours', 'questions')
+
+    def validate_questions(self, value):
+        return _validate_min_questions(value)
+
+    def update(self, instance, validated_data):
+        questions_data = validated_data.pop('questions')
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        _replace_questions(instance, questions_data)
+        return instance

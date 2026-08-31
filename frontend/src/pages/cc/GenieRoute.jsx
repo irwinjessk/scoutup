@@ -5,8 +5,10 @@ import {
   closeCcCompetition,
   createCcCompetition,
   fetchCcCompetitionClassement,
+  fetchCcCompetitionDetail,
   fetchCcCompetitions,
   publishCcCompetition,
+  updateCcCompetition,
 } from '@/api/competitions'
 import { ApiError } from '@/api/client'
 import { Badge } from '@/components/ui/badge'
@@ -118,6 +120,50 @@ function buildQuestionPayload(q, ordre) {
   return payload
 }
 
+const OPTION_LETTERS = ['a', 'b', 'c', 'd']
+
+/** Inverse de buildQuestionPayload — reconstruit l'état éditable du formulaire
+ * à partir d'une question déjà enregistrée (réouverture d'un brouillon). */
+function questionToFormState(q) {
+  const base = {
+    ...emptyQuestion(),
+    type: q.type,
+    enonce: q.enonce,
+    points: q.points,
+  }
+
+  if (q.type === 'QCM') {
+    const options = Array.isArray(q.options) ? q.options : []
+    options.forEach((opt, idx) => {
+      const letter = OPTION_LETTERS[idx]
+      if (letter) base[`option${letter.toUpperCase()}`] = opt.texte ?? ''
+    })
+    const expected = q.reponse_attendue
+    const matchIdx = options.findIndex(
+      (opt) =>
+        (expected?.id != null && opt.id === expected.id) ||
+        (expected?.texte != null && opt.texte === expected.texte),
+    )
+    base.correct = OPTION_LETTERS[matchIdx] ?? 'a'
+    return base
+  }
+
+  if (q.type === 'TEXTE_TROUS') {
+    const expected = q.reponse_attendue
+    if (Array.isArray(expected) && Array.isArray(expected[0])) {
+      base.trousReponses = expected.map((row) => row.join(';')).join('|')
+    } else if (Array.isArray(expected)) {
+      base.trousReponses = expected.join('|')
+    }
+    return base
+  }
+
+  base.reponseDirecte = Array.isArray(q.reponse_attendue)
+    ? q.reponse_attendue.join('|')
+    : String(q.reponse_attendue ?? '')
+  return base
+}
+
 export default function CcGenieRoute() {
   const [competitions, setCompetitions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -125,6 +171,7 @@ export default function CcGenieRoute() {
   const [busy, setBusy] = useState(false)
 
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState(null)
   const [titre, setTitre] = useState('')
   const [dureeJours, setDureeJours] = useState(2)
   const [questions, setQuestions] = useState([emptyQuestion()])
@@ -151,6 +198,7 @@ export default function CcGenieRoute() {
   }, [])
 
   function resetForm() {
+    setEditingId(null)
     setTitre('')
     setDureeJours(2)
     setQuestions([emptyQuestion()])
@@ -159,6 +207,26 @@ export default function CcGenieRoute() {
 
   function updateQuestion(key, patch) {
     setQuestions((prev) => prev.map((q) => (q.key === key ? { ...q, ...patch } : q)))
+  }
+
+  async function onEdit(comp) {
+    setBusy(true)
+    setError('')
+    try {
+      const data = await fetchCcCompetitionDetail(comp.id)
+      setTitre(data.titre)
+      setDureeJours(data.duree_jours)
+      const sorted = [...(data.questions || [])].sort(
+        (a, b) => (a.ordre ?? 0) - (b.ordre ?? 0),
+      )
+      setQuestions(sorted.length ? sorted.map(questionToFormState) : [emptyQuestion()])
+      setEditingId(comp.id)
+      setShowForm(true)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Impossible de rouvrir le brouillon.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function onCreate(e) {
@@ -177,11 +245,15 @@ export default function CcGenieRoute() {
         duree_jours: Number(dureeJours) || 2,
         questions: questions.map((q, idx) => buildQuestionPayload(q, idx + 1)),
       }
-      await createCcCompetition(payload)
+      if (editingId) {
+        await updateCcCompetition(editingId, payload)
+      } else {
+        await createCcCompetition(payload)
+      }
       resetForm()
       await loadCompetitions()
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Création impossible.')
+      setError(err instanceof ApiError ? err.message : 'Enregistrement impossible.')
     } finally {
       setBusy(false)
     }
@@ -273,6 +345,12 @@ export default function CcGenieRoute() {
           onSubmit={onCreate}
           className="space-y-4 rounded-2xl border border-[var(--chef-border)] bg-white p-4"
         >
+          {editingId ? (
+            <p className="text-sm font-medium text-[var(--chef-primary)]">
+              Modification du brouillon
+            </p>
+          ) : null}
+
           <div className="grid gap-3 sm:grid-cols-[1fr_140px]">
             <input
               required
@@ -441,7 +519,7 @@ export default function CcGenieRoute() {
               disabled={busy}
               className="bg-[var(--chef-primary)] text-white hover:bg-[var(--chef-primary)]/90"
             >
-              {busy ? '…' : 'Créer la compétition'}
+              {busy ? '…' : editingId ? 'Enregistrer les modifications' : 'Créer la compétition'}
             </Button>
             <Button type="button" variant="outline" onClick={resetForm}>
               Annuler
@@ -478,6 +556,17 @@ export default function CcGenieRoute() {
                   <Badge variant="secondary" className={cn('border-0', statutTone(comp.statut))}>
                     {STATUT_LABEL[comp.statut] || comp.statut}
                   </Badge>
+                  {comp.statut === 'BROUILLON' ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => onEdit(comp)}
+                      className="border-[var(--chef-border)]"
+                    >
+                      Modifier
+                    </Button>
+                  ) : null}
                   {comp.statut === 'BROUILLON' ? (
                     <Button
                       size="sm"
