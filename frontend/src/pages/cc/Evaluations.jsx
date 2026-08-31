@@ -4,10 +4,12 @@ import { CheckCircle2, ChevronRight, Plus, X, XCircle } from 'lucide-react'
 import {
   closeCcEvaluation,
   createCcEvaluation,
+  fetchCcEvaluationDetail,
   fetchCcEvaluationParticipantDetail,
   fetchCcEvaluationResults,
   fetchCcEvaluations,
   publishCcEvaluation,
+  updateCcEvaluation,
 } from '@/api/evaluations'
 import { ApiError } from '@/api/client'
 import { Badge } from '@/components/ui/badge'
@@ -113,6 +115,50 @@ function buildQuestionPayload(q, ordre) {
   return payload
 }
 
+const OPTION_LETTERS = ['a', 'b', 'c', 'd']
+
+/** Inverse de buildQuestionPayload — reconstruit l'état éditable du formulaire
+ * à partir d'une question déjà enregistrée (réouverture d'un brouillon). */
+function questionToFormState(q) {
+  const base = {
+    ...emptyQuestion(),
+    type: q.type,
+    enonce: q.enonce,
+    points: q.points,
+  }
+
+  if (q.type === 'QCM') {
+    const options = Array.isArray(q.options) ? q.options : []
+    options.forEach((opt, idx) => {
+      const letter = OPTION_LETTERS[idx]
+      if (letter) base[`option${letter.toUpperCase()}`] = opt.texte ?? ''
+    })
+    const expected = q.reponse_attendue
+    const matchIdx = options.findIndex(
+      (opt) =>
+        (expected?.id != null && opt.id === expected.id) ||
+        (expected?.texte != null && opt.texte === expected.texte),
+    )
+    base.correct = OPTION_LETTERS[matchIdx] ?? 'a'
+    return base
+  }
+
+  if (q.type === 'TEXTE_TROUS') {
+    const expected = q.reponse_attendue
+    if (Array.isArray(expected) && Array.isArray(expected[0])) {
+      base.trousReponses = expected.map((row) => row.join(';')).join('|')
+    } else if (Array.isArray(expected)) {
+      base.trousReponses = expected.join('|')
+    }
+    return base
+  }
+
+  base.reponseDirecte = Array.isArray(q.reponse_attendue)
+    ? q.reponse_attendue.join('|')
+    : String(q.reponse_attendue ?? '')
+  return base
+}
+
 function formatAnswerValue(type, value) {
   if (value == null || value === '') return '—'
   if (type === 'QCM') {
@@ -133,6 +179,7 @@ export default function CcEvaluations() {
   const [busy, setBusy] = useState(false)
 
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState(null)
   const [titre, setTitre] = useState('')
   const [dureeMinutes, setDureeMinutes] = useState(20)
   const [questions, setQuestions] = useState([emptyQuestion()])
@@ -164,6 +211,7 @@ export default function CcEvaluations() {
   }, [])
 
   function resetForm() {
+    setEditingId(null)
     setTitre('')
     setDureeMinutes(20)
     setQuestions([emptyQuestion()])
@@ -172,6 +220,26 @@ export default function CcEvaluations() {
 
   function updateQuestion(key, patch) {
     setQuestions((prev) => prev.map((q) => (q.key === key ? { ...q, ...patch } : q)))
+  }
+
+  async function onEdit(ev) {
+    setBusy(true)
+    setError('')
+    try {
+      const data = await fetchCcEvaluationDetail(ev.id)
+      setTitre(data.titre)
+      setDureeMinutes(data.duree_minutes)
+      const sorted = [...(data.questions || [])].sort(
+        (a, b) => (a.ordre ?? 0) - (b.ordre ?? 0),
+      )
+      setQuestions(sorted.length ? sorted.map(questionToFormState) : [emptyQuestion()])
+      setEditingId(ev.id)
+      setShowForm(true)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Impossible de rouvrir le brouillon.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function onCreate(e) {
@@ -184,11 +252,15 @@ export default function CcEvaluations() {
         duree_minutes: Number(dureeMinutes) || 20,
         questions: questions.map((q, idx) => buildQuestionPayload(q, idx + 1)),
       }
-      await createCcEvaluation(payload)
+      if (editingId) {
+        await updateCcEvaluation(editingId, payload)
+      } else {
+        await createCcEvaluation(payload)
+      }
       resetForm()
       await loadEvaluations()
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Création impossible.')
+      setError(err instanceof ApiError ? err.message : 'Enregistrement impossible.')
     } finally {
       setBusy(false)
     }
@@ -286,6 +358,12 @@ export default function CcEvaluations() {
           onSubmit={onCreate}
           className="space-y-4 rounded-2xl border border-[var(--chef-border)] bg-white p-4"
         >
+          {editingId ? (
+            <p className="text-sm font-medium text-[var(--chef-primary)]">
+              Modification du brouillon
+            </p>
+          ) : null}
+
           <div className="grid gap-3 sm:grid-cols-[1fr_140px]">
             <input
               required
@@ -446,7 +524,7 @@ export default function CcEvaluations() {
               disabled={busy}
               className="bg-[var(--chef-primary)] text-white hover:bg-[var(--chef-primary)]/90"
             >
-              {busy ? '…' : 'Créer l’évaluation'}
+              {busy ? '…' : editingId ? 'Enregistrer les modifications' : 'Créer l’évaluation'}
             </Button>
             <Button type="button" variant="outline" onClick={resetForm}>
               Annuler
@@ -483,6 +561,17 @@ export default function CcEvaluations() {
                   <Badge variant="secondary" className={cn('border-0', statutTone(ev.statut))}>
                     {STATUT_LABEL[ev.statut] || ev.statut}
                   </Badge>
+                  {ev.statut === 'BROUILLON' ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => onEdit(ev)}
+                      className="border-[var(--chef-border)]"
+                    >
+                      Modifier
+                    </Button>
+                  ) : null}
                   {ev.statut === 'BROUILLON' ? (
                     <Button
                       size="sm"

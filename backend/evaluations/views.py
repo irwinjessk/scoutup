@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import permissions, status
 from rest_framework.response import Response
@@ -12,6 +13,7 @@ from .serializers import (
     EvaluationAnswerDetailSerializer,
     EvaluationAttemptResultSerializer,
     EvaluationCreateSerializer,
+    EvaluationDetailSerializer,
     EvaluationQuestionPublicSerializer,
     EvaluationSerializer,
     EvaluationUpdateSerializer,
@@ -47,7 +49,17 @@ class CCEvaluationDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsActif, IsCC]
 
     def _get(self, request, pk):
-        return Evaluation.objects.filter(pk=pk, communaute_id=request.user.communaute_id).first()
+        return (
+            Evaluation.objects.filter(pk=pk, communaute_id=request.user.communaute_id)
+            .prefetch_related('questions')
+            .first()
+        )
+
+    def get(self, request, pk):
+        evaluation = self._get(request, pk)
+        if not evaluation:
+            return Response({'detail': 'Évaluation introuvable.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(EvaluationDetailSerializer(evaluation).data)
 
     def put(self, request, pk):
         evaluation = self._get(request, pk)
@@ -60,7 +72,8 @@ class CCEvaluationDetailView(APIView):
             )
         serializer = EvaluationUpdateSerializer(evaluation, data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        with transaction.atomic():
+            serializer.save()
         return Response(EvaluationSerializer(evaluation).data)
 
 
