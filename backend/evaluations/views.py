@@ -387,13 +387,25 @@ class CGEvaluationsView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsActif, IsCG]
 
     def get(self, request):
+        from accounts.models import Role, StatutCompte, User
+
         evaluations = (
             Evaluation.objects.filter(communaute__groupe_id=request.user.groupe_id)
             .select_related('communaute', 'created_by')
             .order_by('-created_at')
         )
+
+        nb_actifs_par_communaute = {}
         rows = []
         for evaluation in evaluations:
+            communaute_id = evaluation.communaute_id
+            if communaute_id not in nb_actifs_par_communaute:
+                nb_actifs_par_communaute[communaute_id] = User.objects.filter(
+                    role=Role.JEUNE,
+                    statut=StatutCompte.ACTIF,
+                    communaute_id=communaute_id,
+                ).count()
+
             rows.append(
                 {
                     'id': evaluation.id,
@@ -404,6 +416,7 @@ class CGEvaluationsView(APIView):
                         evaluation.created_by.nom_complet if evaluation.created_by else None
                     ),
                     'nb_participants': evaluation.attempts.count(),
+                    'nb_actifs': nb_actifs_par_communaute[communaute_id],
                     'published_at': evaluation.published_at,
                     'closes_at': evaluation.closes_at,
                 }

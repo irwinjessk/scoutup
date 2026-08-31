@@ -47,7 +47,7 @@ function EvaluationRow({ row }) {
 
       <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm text-[var(--chef-muted)]">
         <span>
-          {row.nb_participants} participant{row.nb_participants > 1 ? 's' : ''}
+          {row.nb_participants} / {row.nb_actifs} participant{row.nb_actifs > 1 ? 's' : ''}
         </span>
         {row.published_at ? <span>Publiée le {formatDate(row.published_at)}</span> : null}
         {row.closes_at ? <span>Clôture le {formatDate(row.closes_at)}</span> : null}
