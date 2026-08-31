@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Evaluation, EvaluationAttempt, EvaluationQuestion
+from .models import Evaluation, EvaluationAnswer, EvaluationAttempt, EvaluationQuestion
 
 
 class EvaluationQuestionSerializer(serializers.ModelSerializer):
@@ -103,6 +103,31 @@ class EvaluationAttemptResultSerializer(serializers.ModelSerializer):
         if obj.started_at and obj.submitted_at:
             return round((obj.submitted_at - obj.started_at).total_seconds() / 60, 1)
         return None
+
+
+class EvaluationAnswerDetailSerializer(serializers.ModelSerializer):
+    """Détail question par question d'une réponse notée — utilisé pour le correctif CC/jeune."""
+
+    question_id = serializers.IntegerField(source='question.id', read_only=True)
+    type = serializers.CharField(source='question.type', read_only=True)
+    enonce = serializers.CharField(source='question.enonce', read_only=True)
+    options = serializers.JSONField(source='question.options', read_only=True)
+    reponse_attendue = serializers.JSONField(source='question.reponse_attendue', read_only=True)
+    points_max = serializers.IntegerField(source='question.points', read_only=True)
+
+    class Meta:
+        model = EvaluationAnswer
+        fields = (
+            'question_id',
+            'type',
+            'enonce',
+            'options',
+            'reponse_attendue',
+            'points_max',
+            'reponse',
+            'est_correcte',
+            'points_obtenus',
+        )
 
 
 class JeuneEvaluationAttemptSerializer(serializers.ModelSerializer):

@@ -4,10 +4,12 @@ from .views import (
     CCEvaluationCloseView,
     CCEvaluationDetailView,
     CCEvaluationListCreateView,
+    CCEvaluationParticipantDetailView,
     CCEvaluationPublishView,
     CCEvaluationResultsView,
     CCPresencesView,
     CGEvaluationsView,
+    JeuneEvaluationAttemptDetailView,
     JeuneEvaluationJoinView,
     JeuneEvaluationListView,
     JeuneEvaluationQuestionsView,
@@ -35,9 +37,19 @@ urlpatterns = [
         CCEvaluationResultsView.as_view(),
         name='cc-evaluation-results',
     ),
+    path(
+        'cc/evaluations/<int:pk>/participants/<int:jeune_id>/',
+        CCEvaluationParticipantDetailView.as_view(),
+        name='cc-evaluation-participant-detail',
+    ),
     path('cc/presences/', CCPresencesView.as_view(), name='cc-presences'),
     # Jeune
     path('jeune/evaluations/', JeuneEvaluationListView.as_view(), name='jeune-evaluations'),
+    path(
+        'jeune/evaluations/attempts/<int:attempt_id>/',
+        JeuneEvaluationAttemptDetailView.as_view(),
+        name='jeune-evaluation-attempt-detail',
+    ),
     path(
         'jeune/evaluations/<int:pk>/join/',
         JeuneEvaluationJoinView.as_view(),

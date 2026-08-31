@@ -32,6 +32,10 @@ export function fetchCcEvaluationResults(id) {
   return apiFetch(`cc/evaluations/${id}/results/`)
 }
 
+export function fetchCcEvaluationParticipantDetail(evaluationId, jeuneId) {
+  return apiFetch(`cc/evaluations/${evaluationId}/participants/${jeuneId}/`)
+}
+
 export function fetchCcPresences() {
   return apiFetch('cc/presences/')
 }
@@ -55,6 +59,10 @@ export function submitEvaluation(id, reponses) {
     method: 'POST',
     body: JSON.stringify({ reponses }),
   })
+}
+
+export function fetchJeuneEvaluationAttemptDetail(attemptId) {
+  return apiFetch(`jeune/evaluations/attempts/${attemptId}/`)
 }
 
 /** ── CG ─────────────────────────────────────────────── */

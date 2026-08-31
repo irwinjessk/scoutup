@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Award, ClipboardCheck } from 'lucide-react'
+import { Award, CheckCircle2, ChevronRight, ClipboardCheck, XCircle } from 'lucide-react'
 
 import {
   fetchEvaluationQuestions,
+  fetchJeuneEvaluationAttemptDetail,
   fetchJeuneEvaluations,
   joinEvaluation,
   submitEvaluation,
@@ -11,10 +12,30 @@ import { ApiError } from '@/api/client'
 import ModuleShell from '@/components/layout/ModuleShell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 
 function splitEnonce(enonce) {
   return String(enonce || '').split(/_{3,}/)
+}
+
+function formatAnswerValue(type, value) {
+  if (value == null || value === '') return '—'
+  if (type === 'QCM') {
+    if (value && typeof value === 'object') return value.texte ?? String(value.id ?? '—')
+    return String(value)
+  }
+  if (Array.isArray(value)) {
+    if (Array.isArray(value[0])) return value[0].join(' · ')
+    return value.join(' · ') || '—'
+  }
+  return String(value)
 }
 
 function formatCountdown(ms) {
@@ -36,6 +57,11 @@ export default function JeuneEvaluation() {
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState(null)
   const [now, setNow] = useState(Date.now())
+
+  const [detailFor, setDetailFor] = useState(null)
+  const [detail, setDetail] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState('')
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000)
@@ -82,6 +108,27 @@ export default function JeuneEvaluation() {
 
   function updateAnswer(questionId, value) {
     setAnswers((prev) => ({ ...prev, [questionId]: value }))
+  }
+
+  async function onShowAttemptDetail(h) {
+    setDetailFor(h)
+    setDetail(null)
+    setDetailError('')
+    setDetailLoading(true)
+    try {
+      const data = await fetchJeuneEvaluationAttemptDetail(h.id)
+      setDetail(data)
+    } catch (err) {
+      setDetailError(err instanceof ApiError ? err.message : 'Détail indisponible.')
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  function closeDetail() {
+    setDetailFor(null)
+    setDetail(null)
+    setDetailError('')
   }
 
   const remainingMs = session ? new Date(session.closesAt).getTime() - now : null
@@ -306,19 +353,107 @@ export default function JeuneEvaluation() {
         ) : (
           <ul className="space-y-2">
             {historique.map((h) => (
-              <li
-                key={h.id}
-                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm"
-              >
-                <span className="text-white/80">{h.evaluation_titre}</span>
-                <span className="font-medium text-white">
-                  {h.score} / {h.score_max}
-                </span>
+              <li key={h.id}>
+                <button
+                  type="button"
+                  onClick={() => onShowAttemptDetail(h)}
+                  className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-left text-sm transition hover:border-white/20 hover:bg-white/[0.07]"
+                >
+                  <span className="text-white/80">{h.evaluation_titre}</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="font-medium text-white">
+                      {h.score} / {h.score_max}
+                    </span>
+                    <ChevronRight className="size-4 text-white/35" />
+                  </span>
+                </button>
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      <Sheet open={Boolean(detailFor)} onOpenChange={(open) => !open && closeDetail()}>
+        <SheetContent
+          side="bottom"
+          className="flex h-[min(88svh,680px)] flex-col gap-0 border-white/10 bg-[#0d1117] p-0 text-white sm:max-w-none"
+          showCloseButton
+        >
+          <SheetHeader className="shrink-0 border-b border-white/10 px-4 py-3 text-left">
+            <SheetTitle className="text-base text-white">{detail?.evaluation_titre}</SheetTitle>
+            <SheetDescription className="text-white/45">
+              {detail ? `${detail.score} / ${detail.score_max} pts` : ''}
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            {detailError ? (
+              <p className="rounded-xl border border-[#ff3131]/30 bg-[#ff3131]/10 px-3 py-2 text-sm text-[#ff8a8a]">
+                {detailError}
+              </p>
+            ) : null}
+
+            {detailLoading ? <p className="text-sm text-white/45">Chargement…</p> : null}
+
+            {!detailLoading && detail && !detail.corrige ? (
+              <p className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white/60">
+                Le correctif sera visible une fois l’évaluation clôturée par ton chef.
+              </p>
+            ) : null}
+
+            {!detailLoading && detail
+              ? detail.reponses.map((r, idx) => (
+                  <div
+                    key={r.question_id}
+                    className={cn(
+                      'rounded-xl border px-4 py-3',
+                      detail.corrige
+                        ? r.est_correcte
+                          ? 'border-emerald-500/25 bg-emerald-500/10'
+                          : 'border-[#ff3131]/25 bg-[#ff3131]/10'
+                        : 'border-white/10 bg-white/[0.04]',
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-xs font-medium uppercase tracking-wider text-white/35">
+                        Question {idx + 1}
+                      </p>
+                      {detail.corrige ? (
+                        r.est_correcte ? (
+                          <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />
+                        ) : (
+                          <XCircle className="size-4 shrink-0 text-[#ff8a8a]" />
+                        )
+                      ) : null}
+                    </div>
+                    <p className="mt-1 text-sm font-medium text-white">{r.enonce}</p>
+                    <div className="mt-2 space-y-1 text-sm">
+                      <p>
+                        <span className="text-white/45">Ta réponse : </span>
+                        <span className="font-medium text-white">
+                          {formatAnswerValue(r.type, r.reponse)}
+                        </span>
+                      </p>
+                      {detail.corrige && !r.est_correcte ? (
+                        <p>
+                          <span className="text-white/45">Réponse attendue : </span>
+                          <span className="font-medium text-emerald-400">
+                            {formatAnswerValue(r.type, r.reponse_attendue)}
+                          </span>
+                        </p>
+                      ) : null}
+                    </div>
+                    {detail.corrige ? (
+                      <p className="mt-2 text-xs text-white/35">
+                        {r.points_obtenus} / {r.points_max} pt{r.points_max > 1 ? 's' : ''}
+                      </p>
+                    ) : null}
+                  </div>
+                ))
+              : null}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
