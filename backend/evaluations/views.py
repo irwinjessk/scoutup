@@ -213,6 +213,12 @@ class CCPresencesView(APIView):
             communaute_id=request.user.communaute_id,
         ).count()
 
+        for evaluation in Evaluation.objects.filter(
+            communaute_id=request.user.communaute_id,
+            statut=EvaluationStatut.OUVERTE,
+        ):
+            sync_closure(evaluation)
+
         evaluations = Evaluation.objects.filter(
             communaute_id=request.user.communaute_id,
             statut=EvaluationStatut.CLOTUREE,
@@ -413,6 +419,7 @@ class CGEvaluationsView(APIView):
         nb_actifs_par_communaute = {}
         rows = []
         for evaluation in evaluations:
+            sync_closure(evaluation)
             communaute_id = evaluation.communaute_id
             if communaute_id not in nb_actifs_par_communaute:
                 nb_actifs_par_communaute[communaute_id] = User.objects.filter(

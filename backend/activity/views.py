@@ -5,7 +5,9 @@ from rest_framework.views import APIView
 
 from accounts.permissions import IsActif, IsCC, IsCG
 from competitions.models import Competition, CompetitionAttempt, CompetitionStatut
+from competitions.services import sync_closure as sync_closure_competition
 from evaluations.models import Evaluation, EvaluationAttempt, EvaluationStatut
+from evaluations.services import sync_closure as sync_closure_evaluation
 from formation.models import FormationProgress, ProgressStatut, Question, Stage
 
 
@@ -47,6 +49,11 @@ class CCDashboardView(APIView):
             for stage in stages
         ]
 
+        for evaluation in Evaluation.objects.filter(
+            communaute_id=communaute_id, statut=EvaluationStatut.OUVERTE
+        ):
+            sync_closure_evaluation(evaluation)
+
         evaluations_cloturees = Evaluation.objects.filter(
             communaute_id=communaute_id, statut=EvaluationStatut.CLOTUREE
         )
@@ -70,6 +77,11 @@ class CCDashboardView(APIView):
             if nb_evaluations and jeunes_actifs
             else None
         )
+
+        for competition in Competition.objects.filter(
+            communaute_id=communaute_id, statut=CompetitionStatut.OUVERTE
+        ):
+            sync_closure_competition(competition)
 
         competitions_cloturees = Competition.objects.filter(
             communaute_id=communaute_id, statut=CompetitionStatut.CLOTUREE
@@ -131,6 +143,8 @@ class CGDashboardView(APIView):
             .select_related('communaute')
             .order_by('-created_at')[:5]
         )
+        for evaluation in evaluations_recentes:
+            sync_closure_evaluation(evaluation)
         historique = [
             {
                 'id': e.id,
