@@ -285,9 +285,11 @@ class CGCompetitionsView(APIView):
         competitions = (
             Competition.objects.filter(communaute__groupe_id=request.user.groupe_id)
             .select_related('communaute', 'created_by')
-            .prefetch_related('attempts__jeune')
             .order_by('-created_at')
         )
+        # Pas de prefetch_related('attempts__jeune') ici : build_classement() applique
+        # son propre order_by() sur le related manager, ce qui ignorerait le cache de
+        # prefetch et redéclencherait une requête de toute façon.
 
         nb_actifs_par_communaute = {}
         rows = []

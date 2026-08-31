@@ -436,7 +436,7 @@ class CGEvaluationsView(APIView):
                     'cc_nom_complet': (
                         evaluation.created_by.nom_complet if evaluation.created_by else None
                     ),
-                    'nb_participants': evaluation.attempts.count(),
+                    'nb_participants': len(participants),
                     'nb_actifs': nb_actifs_par_communaute[communaute_id],
                     'published_at': evaluation.published_at,
                     'closes_at': evaluation.closes_at,
