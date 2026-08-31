@@ -23,3 +23,24 @@ export function updateCcCompetition(id, payload) {
 export function publishCcCompetition(id) {
   return apiFetch(`cc/competitions/${id}/publish/`, { method: 'POST' })
 }
+
+/** ── Jeune ──────────────────────────────────────────── */
+
+export function fetchJeuneCompetitions() {
+  return apiFetch('jeune/competitions/')
+}
+
+export function joinCompetition(id) {
+  return apiFetch(`jeune/competitions/${id}/join/`, { method: 'POST' })
+}
+
+export function fetchNextCompetitionQuestion(id) {
+  return apiFetch(`jeune/competitions/${id}/question/`)
+}
+
+export function answerCompetitionQuestion(id, { questionId, reponse }) {
+  return apiFetch(`jeune/competitions/${id}/repondre/`, {
+    method: 'POST',
+    body: JSON.stringify({ question_id: questionId, reponse }),
+  })
+}
