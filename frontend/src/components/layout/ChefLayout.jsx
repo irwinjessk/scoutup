@@ -99,17 +99,12 @@ export default function ChefLayout({ variant, title, items }) {
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-3 px-4 py-5">
         <img src={logoScoutUp} alt="ScoutUp" className="h-9 w-auto" />
-        <div className="min-w-0 leading-tight">
-          <p className="truncate text-sm font-semibold text-[var(--chef-ink)]">
-            ScoutUp
-          </p>
-          <Badge
-            variant="secondary"
-            className="mt-1 border-0 bg-[var(--chef-primary)]/12 text-[10px] text-[var(--chef-primary)]"
-          >
-            {title}
-          </Badge>
-        </div>
+        <Badge
+          variant="secondary"
+          className="min-w-0 truncate border-0 bg-[var(--chef-primary)]/12 text-[10px] text-[var(--chef-primary)]"
+        >
+          {title}
+        </Badge>
       </div>
       <Separator className="bg-[var(--chef-border)]" />
       <div className="min-h-0 flex-1 overflow-y-auto">

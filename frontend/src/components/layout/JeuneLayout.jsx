@@ -72,10 +72,7 @@ export default function JeuneLayout() {
       >
         <div className="flex items-center gap-3">
           <img src={logoScoutUp} alt="ScoutUp" className="h-9 w-auto" />
-          <div className="leading-tight">
-            <p className="text-sm font-semibold tracking-tight">ScoutUp</p>
-            <p className="text-xs text-white/45">Espace jeune</p>
-          </div>
+          <p className="text-xs text-white/45">Espace jeune</p>
         </div>
         <div className="flex items-center gap-2">
           <FoulardIndicator />
