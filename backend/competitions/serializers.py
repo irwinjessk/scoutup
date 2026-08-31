@@ -66,8 +66,16 @@ class CompetitionSerializer(serializers.ModelSerializer):
             'created_at',
             'nb_questions',
             'nb_participants',
+            'partage_token',
         )
-        read_only_fields = ('id', 'statut', 'published_at', 'closes_at', 'created_at')
+        read_only_fields = (
+            'id',
+            'statut',
+            'published_at',
+            'closes_at',
+            'created_at',
+            'partage_token',
+        )
 
 
 def _replace_questions(competition, questions_data):
